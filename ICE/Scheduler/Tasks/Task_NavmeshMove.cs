@@ -31,6 +31,9 @@ namespace ICE.Scheduler.Tasks
         private static DateTime lastTimeTracked = DateTime.Now;
         private static bool isJumpInProgress = false;
 
+        private static Random random = new();
+        private static int randomCounter = 0;
+
         private static FishingDebug _fishingDebug = null;
 
         public enum TravelTypes
@@ -498,6 +501,30 @@ namespace ICE.Scheduler.Tasks
                     LandZone = new(-123.94f, -193.70f, -802.01f),
                     RequiredLogLv = 14,
                 }
+            },
+            [1319] = new()
+            {
+                new()
+                {
+                    MapSelector = 0,
+                    AethernetId = 2015422,
+                    Location = new(259.8f, 205.64f, 356.3f),
+                    LandZone = new(260.9f, 205.6f, 355.6f)
+                },
+                new()
+                {
+                    MapSelector = 1,
+                    AethernetId = 2015423,
+                    Location = new(-226.37f, 145.01f, -560.4f),
+                    LandZone = new(-226.0f, 145.0f, -559.3f)
+                },
+                new()
+                {
+                    MapSelector = 1,
+                    AethernetId = 2015424,
+                    Location = new(-242.73f, 168.05f, 321.17f),
+                    LandZone = new(-243.1f, 168.0f, 320.6f)
+                }
             }
         };
         private static Task? _PathCalculations = null;
@@ -558,7 +585,8 @@ namespace ICE.Scheduler.Tasks
         {
             [1237] = 15,
             [1291] = 15,
-            [1310] = 0,
+            [1310] = 17,
+            [1319] = 2
         };
 
         private static bool? CalculateAethernet(Vector3 destination)
@@ -1181,7 +1209,6 @@ namespace ICE.Scheduler.Tasks
         }
 
         private static int counter = 0;
-
         private static unsafe bool? TravelToAethershard(PathInfo shardInfo)
         {
             string tag = "[Navmesh: Aethershard movement]";
@@ -1199,29 +1226,58 @@ namespace ICE.Scheduler.Tasks
 
             if (Player.DistanceTo(targetAether.Location) < 5)
             {
-                if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("TelepotTown", out var TelepotTown) && TelepotTown->IsReady)
+                void InteractWithShard()
                 {
-                    if (EzThrottler.Throttle("Use Aethernet", 100))
+                    if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("TelepotTown", out var TelepotTown) && TelepotTown->IsReady)
                     {
-                        GenericHandlers.FireCallback("TelepotTown", true, 11, menuId);
+                        if (EzThrottler.Throttle("Use Aethernet", 100))
+                        {
+                            GenericHandlers.FireCallback("TelepotTown", true, 11, menuId);
+                        }
+                    }
+                    else
+                    {
+                        var aethernet = Svc.Objects.Where(x => x.BaseId == targetId).FirstOrDefault();
+                        if (aethernet != null)
+                        {
+                            if (Player.Mounted || Player.IsJumping)
+                            {
+                                Utils.Dismount();
+                                return;
+                            }
+                            else if (!Player.IsBusy)
+                            {
+                                Utils.TargetgameObject(aethernet);
+                                Utils.InteractWithObject(aethernet);
+                            }
+                        }
+                    }
+                }
+
+                if (C.Delay_Aethernet)
+                {
+                    int delay = random.Next(1999, 6001);
+                    if (EzThrottler.Throttle("Delay for npc travel", delay))
+                    {
+                        randomCounter += 1;
+                    }
+
+                    if (randomCounter < 2)
+                    {
+                        if (EzThrottler.Throttle("Wait for random encounter"))
+                            IceLogging.Verbose("Waiting for the random timer to fully randomize");
+
+                        return false;
+                    }
+                    else
+                    {
+                        if (EzThrottler.Throttle("Interact with shard"))
+                            InteractWithShard();
                     }
                 }
                 else
                 {
-                    var aethernet = Svc.Objects.Where(x => x.BaseId == targetId).FirstOrDefault();
-                    if (aethernet != null)
-                    {
-                        if (Player.Mounted || Player.IsJumping)
-                        {
-                            Utils.Dismount();
-                            return false;
-                        }
-                        else if (!Player.IsBusy)
-                        {
-                            Utils.TargetgameObject(aethernet);
-                            Utils.InteractWithObject(aethernet);
-                        }
-                    }
+                    InteractWithShard();
                 }
             }
             else if (Player.DistanceTo(destinationAether.Location) < 10)
@@ -1249,7 +1305,25 @@ namespace ICE.Scheduler.Tasks
             {
                 if (Player.DistanceTo(redAlertNpc.Location_Circle) < 5)
                 {
-                    IceLogging.Verbose("Close enough to npc to travel", tag);
+                    if (EzThrottler.Throttle("Close enough log"))
+                        IceLogging.Verbose("Close enough to npc to travel", tag);
+
+                    if (C.Delay_Aethernet)
+                    {
+                        int delay = random.Next(1999, 6001);
+                        if (EzThrottler.Throttle("Delay for npc travel", delay))
+                        {
+                            randomCounter += 1;
+                        }
+
+                        if (randomCounter < 2)
+                        {
+                            if (EzThrottler.Throttle("Wait for random encounter"))
+                                IceLogging.Verbose("Waiting for the random timer to fully randomize");
+
+                            return false;
+                        }
+                    }
 
                     if (GenericHelpers.TryGetAddonMaster<SelectString>(out var selectString) && selectString.IsAddonReady)
                     {
@@ -1300,17 +1374,18 @@ namespace ICE.Scheduler.Tasks
                     if (!PlayerHelper.IsScreenReady())
                         return false;
                     else
-
-                    IceLogging.Info("We've reached the red alert destination, need to just do the final pathing", tag);
-                    return true;
+                    {
+                        randomCounter = 0;
+                        IceLogging.Info("We've reached the red alert destination, need to just do the final pathing", tag);
+                        return true;
+                    }
                 }
             }
             else
             {
+                randomCounter = 0;
                 return true;
             }
-
-
 
             return false;
         }
