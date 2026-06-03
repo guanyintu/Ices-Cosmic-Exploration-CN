@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.Utility.Raii;
+using Dalamud.Interface.Utility.Raii;
 using ECommons.Automation;
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
@@ -8,7 +8,6 @@ using Pictomancy;
 using System.Collections.Generic;
 using System.Text;
 using static ICE.Utilities.GatheringHelper.GatheringUtil;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.DebugWindowTabs
 {
@@ -58,7 +57,7 @@ namespace ICE.Ui.DebugWindowTabs
             {
                 var exportData = ExportAllFishingData();
                 ImGui.SetClipboardText(exportData);
-                Svc.Chat.Print(T("All fishing data exported to clipboard!"));
+                Svc.Chat.Print("All fishing data exported to clipboard!");
             }
 
             ImGui.SameLine();
@@ -68,12 +67,12 @@ namespace ICE.Ui.DebugWindowTabs
                 {
                     var exportData = ExportSingleFishingFlag(selectedZone, selectedFlag);
                     ImGui.SetClipboardText(exportData);
-                    Svc.Chat.Print(T("Fishing flag data for Zone {0} at ({1}, {2}) exported to clipboard!", selectedZone, selectedFlag.X, selectedFlag.Y));
+                    Svc.Chat.Print($"Fishing flag data for Zone {selectedZone} at ({selectedFlag.X}, {selectedFlag.Y}) exported to clipboard!");
                 }
             }
 
             ImGui.Checkbox(T("Show fishing spot raycast"), ref _fishingDebug.ShowFishRay);
-            if (PlayerHelper.LocalPlayer is { } player && _fishingDebug.ShowFishRay)
+            if (Player.Object is { } player && _fishingDebug.ShowFishRay)
             {
                 _fishingDebug.Draw();
             }
@@ -93,7 +92,7 @@ namespace ICE.Ui.DebugWindowTabs
                 {
                     foreach (var moon in GatheringUtil.MoonFishingLocations)
                     {
-                        ImGui.Text(T("Zone: {0}", moon.Key));
+                        ImGui.Text($"Zone: {moon.Key}");
                         var sortedFlags = moon.Value.OrderBy(flag => flag.Key.X);
                         foreach (var flag in sortedFlags)
                         {
@@ -119,7 +118,7 @@ namespace ICE.Ui.DebugWindowTabs
 
                 // Second Column, Editor for that route
                 ImGui.TableNextColumn();
-                if (ImGui.BeginChild("Fishing Hole Editor", new Vector2(0, 0), true))
+                if (ImGui.BeginChild(T("Fishing Hole Editor"), new Vector2(0, 0), true))
                 {
                     if (selectedZone != 0 && selectedFlag != Vector2.Zero)
                     {
@@ -184,10 +183,10 @@ namespace ICE.Ui.DebugWindowTabs
                             P.TaskManager.Tasks.Clear();
                             P.TaskManager.Abort();
                         }
-                        ImGui.Text(T("Viable fishing spot: {0}", _fishingDebug.IsFishable()));
+                        ImGui.Text($"Viable fishing spot: {_fishingDebug.IsFishable()}");
                         if (_fishingDebug.FindFishableLocation(out var fishablePosition))
                         {
-                            ImGui.Text(T("First Available Fishing Spot: {0:N2}, {1:N2}, {2:N2}", fishablePosition.Value.X, fishablePosition.Value.Y, fishablePosition.Value.Z));
+                            ImGui.Text($"First Available Fishing Spot: {fishablePosition.Value.X:N2}, {fishablePosition.Value.Y:N2}, {fishablePosition.Value.Z:N2}");
                             if (ImGui.Button(T("Face toward spot")))
                             {
                                 if (_fishingDebug.FindFishableLocation(out var fishPosition, searchSteps: 128))
@@ -256,7 +255,7 @@ namespace ICE.Ui.DebugWindowTabs
                             }
                             if (ImGui.BeginPopup("Option to Delete"))
                             {
-                                if (ImGui.MenuItem("Delete"))
+                                if (ImGui.MenuItem(T("Delete")))
                                 {
                                     fishingHole.RemoveAt(i);
                                     if (selectedSpotIndex >= i) selectedSpotIndex--;

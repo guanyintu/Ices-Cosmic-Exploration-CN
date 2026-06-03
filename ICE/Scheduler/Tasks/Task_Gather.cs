@@ -7,11 +7,9 @@ using ICE.Utilities.Cosmic_Helper;
 using ICE.Resources.GatheringRoutes;
 using ICE.Utilities.GatheringHelper;
 using System.Collections.Generic;
-using System.Globalization;
-using System.Numerics;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
 using static ICE.ConfigFiles.Config;
-using static FFXIVClientStructs.FFXIV.Client.Game.WKS.WKSManager;
+using MissionRank = FFXIVClientStructs.FFXIV.Client.Game.WKS.WKSMissionModule.MissionRank;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -19,11 +17,6 @@ namespace ICE.Scheduler.Tasks
     {
         private static int _lastCollectability = -1;
         private static DateTime _lastCollectProgress = DateTime.MinValue;
-
-        // Mission-entry gather TP state (supports auto-accept + manual-accept).
-        private static uint _preparedMissionIdForEntryTp = 0;
-        private static uint _activeMissionIdForEntryTp = 0;
-        private static bool _runtimeEntryTpHandled = false;
 
         public static void Enqueue()
         {
@@ -53,73 +46,6 @@ namespace ICE.Scheduler.Tasks
                 P.TaskManager.Enqueue(() => CheckCurrentLocation(), "Checking to see if gathering flags needs updated");
                 P.TaskManager.Enqueue(() => PathandCheckNode());
             }
-        }
-
-        // CN-MAINT: Gather DRTP helper.
-        // Rule: mission-entry only (inside mission flag circle => no TP; outside => TP once, then fallback nav if needed).
-        internal static bool TryDailyRoutinesTeleportToGatherLandZone(Vector3 targetPosition, string handle)
-        {
-            if (!C.GatherUseDailyRoutinesTP)
-                return false;
-
-            if (!Utils.HasPlugin("DailyRoutines"))
-            {
-                if (EzThrottler.Throttle("GatherMissingDailyRoutines", 8000))
-                {
-                    IceLogging.Warning("未检测到 Daily Routines，已回退原有寻路。", handle);
-                }
-                return false;
-            }
-
-            if (EzThrottler.Throttle("GatherDailyRoutinesTeleport", 2500))
-            {
-                var command = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "/pdrtp pos {0:F2} {1:F2} {2:F2}",
-                    targetPosition.X,
-                    targetPosition.Y,
-                    targetPosition.Z);
-
-                Svc.Commands.ProcessCommand(command);
-                IceLogging.Debug($"已尝试 Daily Routines 传送：{command}", handle);
-                return true;
-            }
-
-            return false;
-        }
-
-        internal static void MarkMissionEntryPrepared(uint missionId)
-        {
-            _preparedMissionIdForEntryTp = missionId;
-        }
-
-        internal static void UpdateMissionEntryTpState(uint currentMissionId)
-        {
-            if (currentMissionId == 0)
-            {
-                _activeMissionIdForEntryTp = 0;
-                _preparedMissionIdForEntryTp = 0;
-                _runtimeEntryTpHandled = false;
-                return;
-            }
-
-            if (_activeMissionIdForEntryTp != currentMissionId)
-            {
-                _activeMissionIdForEntryTp = currentMissionId;
-                _runtimeEntryTpHandled = false;
-            }
-        }
-
-        internal static bool IsInsideMissionGatherCircle(CosmicHelper.CosmicInfo mission)
-        {
-            if (mission.Radius <= 0)
-                return false;
-
-            var playerPos = Player.Position;
-            var player2D = new Vector2(playerPos.X, playerPos.Z);
-            var flagPos = new Vector2(mission.MapPosition.X, mission.MapPosition.Y);
-
-            return Vector2.Distance(player2D, flagPos) <= mission.Radius;
         }
 
         private static int GatherDelayThrottle = 0;
@@ -475,44 +401,12 @@ namespace ICE.Scheduler.Tasks
 
         public static bool? PathandCheckNode()
         {
-            UpdateMissionEntryTpState(CosmicHelper.CurrentLunarMission);
-
             var zoneId = Player.Territory;
             var missionEntry = CosmicHelper.CurrentMissionInfo;
             var missionFlag = missionEntry.MapPosition;
             var gatherInfo = GatheringRouteLoader.GetRoute(zoneId.RowId, missionFlag);
 
             var location = gatherInfo[Mission_Settings.nodeCounter];
-            var distanceToLandZone = Player.DistanceTo(location.LandZone);
-
-            // Runtime gather TP: evaluate once at node 0 per mission.
-            if (Mission_Settings.nodeCounter == 0 && !_runtimeEntryTpHandled)
-            {
-                _runtimeEntryTpHandled = true;
-
-                bool alreadyPreparedBeforeAccept =
-                    _activeMissionIdForEntryTp != 0 &&
-                    _preparedMissionIdForEntryTp == _activeMissionIdForEntryTp;
-
-                // Skip runtime TP when we're already inside this mission's official flag circle.
-                bool insideMissionCircle = IsInsideMissionGatherCircle(missionEntry);
-
-                if (!alreadyPreparedBeforeAccept &&
-                    !insideMissionCircle &&
-                    TryDailyRoutinesTeleportToGatherLandZone(location.LandZone, "[Gathering: PathAndCheckNode DRTP]"))
-                {
-                    return false;
-                }
-            }
-
-            // Use smart routing (aethernet/hub) for far nodes when closest node selection is active
-            if (C.ClosestNodeSelection && distanceToLandZone > SmartRoutingThreshold)
-            {
-                IceLogging.Info($"Node is far ({distanceToLandZone:N0}y), using smart routing", "[Gathering: SmartRoute]");
-                P.TaskManager.Tasks.Clear();
-                Task_NavmeshMove.Enqueue_NavmeshTask(location.LandZone, distance: 2);
-                return true;
-            }
 
             if (!Task_NavmeshMove.Task_GatherMove(location).Value)
             {
@@ -991,7 +885,6 @@ namespace ICE.Scheduler.Tasks
         }
         private static bool WillOvercap(int recoveryGP)
         {
-            string tag = "Cordial: Overcap Check";
             bool WillOvercap = (PlayerHelper.GetGp() + recoveryGP) > PlayerHelper.MaxGp();
             if (WillOvercap)
             {

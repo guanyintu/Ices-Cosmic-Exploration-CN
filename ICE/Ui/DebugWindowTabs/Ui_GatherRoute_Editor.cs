@@ -1,4 +1,4 @@
-﻿using Dalamud.Game.ClientState.Objects.Enums;
+using Dalamud.Game.ClientState.Objects.Enums;
 using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.GameHelpers;
@@ -9,7 +9,6 @@ using ICE.Utilities.GatheringHelper;
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.DebugWindowTabs
 {
@@ -19,10 +18,8 @@ namespace ICE.Ui.DebugWindowTabs
         private static uint selectedZone = 0;
         private static uint selectedNode = 0;
 
-        private static bool showOnlyVisibleNodes = false;
         private static float maxDistance = 75.0f;
 
-        private static bool showSelectedNode = false;
         private static bool showRouteBetween = true;
 
         private static bool _isGeneratingFan = false;
@@ -69,7 +66,7 @@ namespace ICE.Ui.DebugWindowTabs
                 // Custom Path Display
                 ImGui.Text(T("Export Location:"));
                 string displayPath = string.IsNullOrEmpty(C.CustomRoutePath)
-                    ? T("Using default plugin config folder")
+                    ? "Using default plugin config folder"
                     : C.CustomRoutePath;
 
                 ImGui.TextWrapped(displayPath);
@@ -79,7 +76,7 @@ namespace ICE.Ui.DebugWindowTabs
                 // Browse button to set custom path
                 if (ImGui.Button(T("Browse for Export Folder")))
                 {
-                    fileDialogManager.OpenFolderDialog(T("Select Export Folder"), (success, path) =>
+                    fileDialogManager.OpenFolderDialog("Select Export Folder", (success, path) =>
                     {
                         if (success && !string.IsNullOrEmpty(path))
                         {
@@ -164,7 +161,28 @@ namespace ICE.Ui.DebugWindowTabs
                 foreach (var planet in routes)
                 {
                     var planetTerritory = planet.Key;
-                    ImGui.Text(T("Zone: {0}", planetTerritory));
+                    ImGui.Text($"Zone: {MoonName(planetTerritory)} ({planetTerritory})");
+
+                    // For the zone the player is in, find the flag whose nodes are
+                    // physically closest, so it can be highlighted in the list.
+                    Vector2? closestFlag = null;
+                    float closestDist = float.MaxValue;
+                    if (planetTerritory == Player.Territory.RowId)
+                    {
+                        foreach (var mapLocation in planet.Value)
+                        {
+                            foreach (var node in mapLocation.Value)
+                            {
+                                float dist = Player.DistanceTo(node.Position);
+                                if (dist < closestDist)
+                                {
+                                    closestDist = dist;
+                                    closestFlag = mapLocation.Key;
+                                }
+                            }
+                        }
+                    }
+
                     foreach (var mapLocation in planet.Value)
                     {
                         var location = mapLocation.Key;
@@ -172,7 +190,10 @@ namespace ICE.Ui.DebugWindowTabs
                         ImGui.PushID($"{location}");
 
                         bool isSelected = selectedRoute == location;
+                        bool isClosest = closestFlag.HasValue && location == closestFlag.Value;
                         string selectable = isSelected ? $"-> X: {location.X}, Y: {location.Y}" : $"X: {location.X}, Y: {location.Y}";
+                        if (isClosest)
+                            selectable += "  <-";
 
                         var jobId = GetJobIdForFlag(planetTerritory, location);
 
@@ -181,10 +202,31 @@ namespace ICE.Ui.DebugWindowTabs
 
                         float availableWidth = ImGui.GetContentRegionAvail().X;
 
+                        if (isClosest)
+                            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(0.4f, 1f, 0.4f, 1f));
+
                         if (ImGui.Selectable(selectable, isSelected, ImGuiSelectableFlags.None, new Vector2(availableWidth, 20)))
                         {
                             selectedRoute = location;
                             selectedZone = planetTerritory;
+                        }
+
+                        if (isClosest)
+                            ImGui.PopStyleColor();
+
+                        if (ImGui.IsMouseClicked(ImGuiMouseButton.Right) && ImGui.IsItemHovered())
+                            ImGui.OpenPopup("FlagOnMapPopup");
+
+                        if (ImGui.BeginPopup("FlagOnMapPopup"))
+                        {
+                            if (ImGui.Selectable("Flag on map"))
+                            {
+                                var missionEntry = CosmicHelper.SheetMissionDict.FirstOrDefault(m => m.Value.TerritoryId == planetTerritory && m.Value.MapPosition == location);
+                                int radius = missionEntry.Value != null ? (int)missionEntry.Value.Radius : 20;
+                                string flagName = missionEntry.Value != null ? missionEntry.Value.Name : $"Gathering {location.X}, {location.Y}";
+                                Utils.SetGatheringRing(planetTerritory, (int)location.X, (int)location.Y, radius, flagName);
+                            }
+                            ImGui.EndPopup();
                         }
 
                         ImGui.PopID();
@@ -206,10 +248,13 @@ namespace ICE.Ui.DebugWindowTabs
                 }
                 else
                 {
-                    string missions = string.Join(", ", GetMissionsForFlag(selectedZone, selectedRoute));
-                    ImGui.Text(T("Location: {0}", T(MoonName(selectedZone))));
-                    ImGui.Text(T("Missions: {0}", missions));
-                    ImGui.Text(T("Map Zone: X:{0}, Z: {1}", selectedRoute.X, selectedRoute.Y));
+                    ImGui.Text($"Location: {MoonName(selectedZone)}");
+                    ImGui.Text("Missions:");
+                    foreach (var mission in GetMissionsForFlag(selectedZone, selectedRoute))
+                    {
+                        ImGui.TextWrapped($"  - {mission}");
+                    }
+                    ImGui.Text($"Map Zone: X:{selectedRoute.X}, Z: {selectedRoute.Y}");
 
                     ImGui.Dummy(new Vector2(0, 5));
 
@@ -270,7 +315,7 @@ namespace ICE.Ui.DebugWindowTabs
                                     ReadOnlySpan<byte> data = new ReadOnlySpan<byte>(dataPtr, sizeof(int));
                                     ImGui.SetDragDropPayload("ROUTE_REORDER", data);
                                 }
-                                ImGui.Text(T("Moving: {0}", nodeId));
+                                ImGui.Text($"Moving: {nodeId}");
                                 ImGui.EndDragDropSource();
                             }
 
@@ -314,7 +359,7 @@ namespace ICE.Ui.DebugWindowTabs
                         {
                             ImGui.PushID($"{x.BaseId}_{x.Position}_NodeViewer");
 
-                            ImGui.Text(T("Id: {0} | Distance: {1:N2}", x.BaseId, Player.DistanceTo(x.Position)));
+                            ImGui.Text($"Id: {x.BaseId} | Distance: {Player.DistanceTo(x.Position):N2}");
                             if (ImGui.IsMouseClicked(ImGuiMouseButton.Right) && ImGui.IsItemHovered())
                             {
                                 ImGui.OpenPopup("Node Viewer Popup");
@@ -354,9 +399,9 @@ namespace ICE.Ui.DebugWindowTabs
                                 {
                                     if (localPlayer.TargetObject.BaseId == x.BaseId && localPlayer.TargetObject.ObjectKind == ObjectKind.GatheringPoint)
                                     {
-                                        ImGui.Text(T("ID: {0}", x.BaseId));
-                                        ImGui.Text(T("Position: {0}", x.Position));
-                                        if (ImGui.Button(T("Add")))
+                                        ImGui.Text($"ID: {x.BaseId}");
+                                        ImGui.Text($"Position: {x.Position}");
+                                        if (ImGui.Button($"Add"))
                                         {
                                             routeList.Add(new Resources.GatheringRoutes.GathNodeInfo()
                                             {
@@ -393,8 +438,8 @@ namespace ICE.Ui.DebugWindowTabs
                         var route = routeList.Where(x => x.NodeId == selectedNode).FirstOrDefault();
                         if (route != null)
                         {
-                            ImGui.Text(T("Node Id: {0}", route.NodeId));
-                            ImGui.Text(T("Node Position: {0}", route.Position));
+                            ImGui.Text($"Node Id: {route.NodeId}");
+                            ImGui.Text($"Node Position: {route.Position}");
 
                             // Player Land Zone (currently static, might change this later)
                             Vector3 playerLandZone = route.LandZone;
@@ -417,14 +462,14 @@ namespace ICE.Ui.DebugWindowTabs
                             float height = route.FanHeight;
 
                             ImGui.SetNextItemWidth(100);
-                            if (ImGui.DragFloat(T("Start") + "##radiusStart", ref radiusStart, 1, 0, 360))
+                            if (ImGui.DragFloat("Start##radiusStart", ref radiusStart, 1, 0, 360))
                             {
                                 route.Radius_Start = radiusStart;
                             }
 
                             ImGui.SameLine();
                             ImGui.SetNextItemWidth(100);
-                            if (ImGui.DragFloat(T("End") + "##radiusEnd", ref radiusEnd, 1, 0, 360))
+                            if (ImGui.DragFloat("End##radiusEnd", ref radiusEnd, 1, 0, 360))
                             {
                                 route.Radius_End = radiusEnd;
                             }
@@ -442,14 +487,14 @@ namespace ICE.Ui.DebugWindowTabs
                             float maxDistance = route.Distance_Max;
 
                             ImGui.SetNextItemWidth(100);
-                            if (ImGui.DragFloat(T("Start") + "##minDistance", ref minDistance, 0.1f, 0, 5))
+                            if (ImGui.DragFloat("Start##minDistance", ref minDistance, 0.1f, 0, 5))
                             {
                                 route.Distance_Min = minDistance;
                             }
 
                             ImGui.SameLine();
                             ImGui.SetNextItemWidth(100);
-                            if (ImGui.DragFloat(T("End") + "##maxDistance", ref maxDistance, 0.1f, 0, 5))
+                            if (ImGui.DragFloat("End##maxDistance", ref maxDistance, 0.1f, 0, 5))
                             {
                                 route.Distance_Max = maxDistance;
                             }
@@ -509,14 +554,29 @@ namespace ICE.Ui.DebugWindowTabs
                         }
                     }
 
-                    if (showRouteBetween)
-                    {
-                        PictoManager.DrawGatherNodes(routeList, selectedNode, cachedWaypointPath);
-                    }
+                    // World visuals are queued from the plugin's persistent draw hook
+                    // (see QueueWorldVisuals) so they keep rendering while this window
+                    // is collapsed - the window body stops executing when folded.
                 }
             }
 
             fileDialogManager.Draw();
+        }
+
+        // Queues the selected route's world visuals (nodes, land zones, path) into
+        // PictoManager every frame, driven from the plugin's persistent draw hook.
+        // This keeps the overlay visible when the debug window is collapsed/folded,
+        // since the window body only runs while expanded. Closing the window stops it.
+        public static void QueueWorldVisuals()
+        {
+            if (!showRouteBetween || selectedRoute == Vector2.Zero)
+                return;
+
+            var routeList = GatheringRouteLoader.GetRoute(selectedZone, selectedRoute);
+            if (routeList == null)
+                return;
+
+            PictoManager.DrawGatherNodes(routeList, selectedNode, cachedWaypointPath);
         }
 
         private static uint GetJobIdForFlag(uint territoryId, Vector2 map)
@@ -537,28 +597,20 @@ namespace ICE.Ui.DebugWindowTabs
                 return 8;
         }
 
-        private static List<uint> GetMissionsForFlag(uint territoryId, Vector2 map)
+        private static List<string> GetMissionsForFlag(uint territoryId, Vector2 map)
         {
-            List<uint> missions = new();
+            List<string> missions = new();
             foreach (var mission in CosmicHelper.SheetMissionDict.Where(x => x.Value.MapPosition == map && x.Value.TerritoryId == territoryId))
             {
-                missions.Add(mission.Key);
+                missions.Add($"{mission.Value.Name} ({mission.Key})");
             }
 
             return missions;
         }
 
-        private static string MoonName(uint territoryId)
-        {
-            if (territoryId == 1237)
-                return "Sinus Ardorum";
-            else if (territoryId == 1291)
-                return "Phaenna";
-            else
-            {
-                return "???";
-            }
-        }
+        // territoryId is TerritoryType (1319), not WKSMissionUnit row ID
+        private static string MoonName(uint territoryId) =>
+            CosmicMoonRegistry.GetDisplayName(territoryId);
 
         public static class GatheringRouteExportUI
         {
@@ -573,15 +625,15 @@ namespace ICE.Ui.DebugWindowTabs
                     try
                     {
                         GatheringRouteLoader.ExportAllRoutes();
-                        var exportPath = GetDefaultExportPath();
-                        _lastExportMessage = T("Successfully exported all routes to:\n{0}", exportPath);
+                        var exportPath = GetEffectiveExportPath();
+                        _lastExportMessage = $"Successfully exported all routes to:\n{exportPath}";
                         _lastExportSuccess = true;
                         _lastExportMessageTime = DateTime.Now;
                     }
                     catch (Exception ex)
                     {
                         PluginLog.Error($"Export failed: {ex.Message}");
-                        _lastExportMessage = T("Export failed: {0}", ex.Message);
+                        _lastExportMessage = $"Export failed: {ex.Message}";
                         _lastExportSuccess = false;
                         _lastExportMessageTime = DateTime.Now;
                     }
@@ -589,7 +641,7 @@ namespace ICE.Ui.DebugWindowTabs
 
                 if (ImGui.IsItemHovered())
                 {
-                    ImGui.SetTooltip(T("Export all routes to plugin config folder"));
+                    ImGui.SetTooltip($"Export all routes to:\n{GetEffectiveExportPath()}");
                 }
 
                 DrawExportMessage();
@@ -602,15 +654,15 @@ namespace ICE.Ui.DebugWindowTabs
                     try
                     {
                         GatheringRouteLoader.ExportRoute(zoneId, flag);
-                        var exportPath = GetDefaultExportPath();
-                        _lastExportMessage = T("Successfully exported route to:\n{0}", exportPath);
+                        var exportPath = GetEffectiveExportPath();
+                        _lastExportMessage = $"Successfully exported route to:\n{exportPath}";
                         _lastExportSuccess = true;
                         _lastExportMessageTime = DateTime.Now;
                     }
                     catch (Exception ex)
                     {
                         PluginLog.Error($"Export failed: {ex.Message}");
-                        _lastExportMessage = T("Export failed: {0}", ex.Message);
+                        _lastExportMessage = $"Export failed: {ex.Message}";
                         _lastExportSuccess = false;
                         _lastExportMessageTime = DateTime.Now;
                     }
@@ -618,7 +670,7 @@ namespace ICE.Ui.DebugWindowTabs
 
                 if (ImGui.IsItemHovered())
                 {
-                    ImGui.SetTooltip(T("Export this route to plugin config folder"));
+                    ImGui.SetTooltip($"Export this route to:\n{GetEffectiveExportPath()}");
                 }
 
                 DrawExportMessage();
@@ -676,7 +728,10 @@ namespace ICE.Ui.DebugWindowTabs
                         ? new Vector4(0.0f, 1.0f, 0.0f, 1.0f)  // Green
                         : new Vector4(1.0f, 0.0f, 0.0f, 1.0f); // Red
 
-                    ImGui.TextColored(color, _lastExportMessage);
+                    using (ImRaii.PushColor(ImGuiCol.Text, color))
+                    {
+                        ImGui.TextWrapped(_lastExportMessage);
+                    }
                 }
             }
 
@@ -684,6 +739,13 @@ namespace ICE.Ui.DebugWindowTabs
             {
                 var configDir = Svc.PluginInterface.GetPluginConfigDirectory();
                 return Path.Combine(configDir, "ExportedRoutes");
+            }
+
+            // Mirrors GatheringRouteLoader's export target resolution so the success
+            // message reflects where files actually went (custom path takes precedence).
+            private static string GetEffectiveExportPath()
+            {
+                return !string.IsNullOrEmpty(C.CustomRoutePath) ? C.CustomRoutePath : GetDefaultExportPath();
             }
         }
 
@@ -853,7 +915,7 @@ namespace ICE.Ui.DebugWindowTabs
 
                 if (validDistances.Count == 0)
                 {
-                    _fanGenStatus = T("No reachable points found around this node.");
+                    _fanGenStatus = "No reachable points found around this node.";
                     return;
                 }
 
@@ -891,7 +953,7 @@ namespace ICE.Ui.DebugWindowTabs
 
                 if (bestLen == 0)
                 {
-                    _fanGenStatus = T("Could not find a contiguous arc of reachable angles.");
+                    _fanGenStatus = "Could not find a contiguous arc of reachable angles.";
                     return;
                 }
 
@@ -937,12 +999,12 @@ namespace ICE.Ui.DebugWindowTabs
                 route.Distance_Max = MathF.Round(allMax, 1);
                 route.FanHeight = fanHeight;
 
-                _fanGenStatus = T("Generated! Angles: {0:F0}→{1:F0} (arc {2}°), Distance: {3:F1}→{4:F1}, Height: {5:F2}", pictoStart, pictoEnd, bestLen, allMin, allMax, fanHeight);
+                _fanGenStatus = $"Generated! Angles: {pictoStart:F0}→{pictoEnd:F0} (arc {bestLen}°), Distance: {allMin:F1}→{allMax:F1}, Height: {fanHeight:F2}";
                 IceLogging.Info($"[FanGen] Node {route.NodeId}: Picto {pictoStart:F0}→{pictoEnd:F0}, dist {allMin:F1}→{allMax:F1}, height {fanHeight:F2}");
             }
             catch (Exception ex)
             {
-                _fanGenStatus = T("Error: {0}", ex.Message);
+                _fanGenStatus = $"Error: {ex.Message}";
                 IceLogging.Error($"[FanGen] Failed: {ex.Message}");
             }
             finally

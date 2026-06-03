@@ -110,7 +110,7 @@ namespace ICE.Ui
                     // Row 1
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Cosmocredits");
+                    ImGui.Text(T("Cosmocredits"));
 
                     ImGui.TableNextColumn();
                     ImGui.Text($"{mission.CosmoCredit}");
@@ -196,7 +196,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Gold Requirement");
+                        ImGui.Text(T("Gold Requirement"));
 
                         ImGui.TableNextColumn();
                         ImGui.Text($"{mission.GoldScore}");
@@ -206,7 +206,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Gathering Zone");
+                        ImGui.Text(T("Gathering Zone"));
 
                         ImGui.TableNextColumn();
 
@@ -223,7 +223,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Critical Area");
+                        ImGui.Text(T("Critical Area"));
 
                         ImGui.TableNextColumn();
                         ImGuiEx.Icon(FontAwesomeIcon.Flag);
@@ -297,7 +297,7 @@ namespace ICE.Ui
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-                            ImGui.Text("Lv. 10-49");
+                            ImGui.Text(T("Lv. 10-49"));
 
                             ImGui.TableNextColumn();
                             ImGui.Text($"{mission.ExpModifier_1}%");
@@ -307,7 +307,7 @@ namespace ICE.Ui
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-                            ImGui.Text("Lv. 50-89");
+                            ImGui.Text(T("Lv. 50-89"));
 
                             ImGui.TableNextColumn();
                             ImGui.Text($"{mission.ExpModifier_2}%");
@@ -317,7 +317,7 @@ namespace ICE.Ui
                         {
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-                            ImGui.Text("Lv. 90-99");
+                            ImGui.Text(T("Lv. 90-99"));
 
                             ImGui.TableNextColumn();
                             ImGui.Text($"{mission.ExpModifier_3}%");
@@ -336,10 +336,10 @@ namespace ICE.Ui
 
                 ImGui_Ice.WindowSpacer();
 
-                ImGui.Text("Mission Atributes");
+                ImGui.Text(T("Mission Atributes"));
                 if (mission.Attributes == MissionAttributes.None)
                 {
-                    ImGui.Text("None");
+                    ImGui.Text(T("None"));
                     return;
                 }
                 else
@@ -355,7 +355,7 @@ namespace ICE.Ui
 
                 if (CosmicHelper.MissionUnlock.TryGetValue(SelectedMission, out var unlock))
                 {
-                    ImGui.Text("The following missions are required to have gold before you can do this one");
+                    ImGui.Text(T("The following missions are required to have gold before you can do this one"));
                     foreach (var lockedMission in unlock)
                     {
                         ImGui_Ice.CompletionStatusIcon(CosmicHelper.SheetMissionDict[lockedMission]);
@@ -374,7 +374,7 @@ namespace ICE.Ui
 
                     using (ImRaii.Disabled(!allowDelete))
                     {
-                        if (ImGui.Button("Reset Stats"))
+                        if (ImGui.Button(T("Reset Stats")))
                         {
                             P.MissionTimer.ResetTimers(SelectedMission);
                         }
@@ -382,7 +382,7 @@ namespace ICE.Ui
                     if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("Hold Shift + Control");
+                        ImGui.Text(T("Hold Shift + Control"));
                         ImGui.EndTooltip();
                     }
 
@@ -393,8 +393,8 @@ namespace ICE.Ui
                     }
                     else
                     {
-                        ImGui.Text("Best Time: --:--:--");
-                        ImGui.Text("Average Time: --:--:--");
+                        ImGui.Text(T("Best Time: --:--:--"));
+                        ImGui.Text(T("Average Time: --:--:--"));
                     }
 
                     ImGui.Text($"Times Completed: {config.TotalCompletions}");
@@ -407,15 +407,15 @@ namespace ICE.Ui
                         var planetCredit = missionInfo.LunarCredit;
 
                         ImGui.Separator();
-                        ImGui.Text("Estimated Score Per Hour:");
+                        ImGui.Text(T("Estimated Score Per Hour:"));
                         ImGui.SameLine();
                         ImGui.TextDisabled("?");
                         if (ImGui.IsItemHovered())
                         {
                             ImGui.BeginTooltip();
-                            ImGui.Text("This is ASSUMING:");
-                            ImGui.Text("1: You have immaculate rng of getting the mission you want every time");
-                            ImGui.Text("2: You're hitting the threshold every time");
+                            ImGui.Text(T("This is ASSUMING:"));
+                            ImGui.Text(T("1: You have immaculate rng of getting the mission you want every time"));
+                            ImGui.Text(T("2: You're hitting the threshold every time"));
                             ImGui.Text("This is based on your average time.\n" +
                                        "So get a good couple of runs to get a good feel for the timing");
                             ImGui.EndTooltip();

@@ -1,14 +1,12 @@
-﻿using ECommons.GameHelpers;
+using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.WKS;
 using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ICE.Sounds;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
 using System.Collections.Generic;
-using System.Globalization;
+using System.Linq;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
-using static ICE.Localization.L10n;
-using static ICE.Ui.MainUi.ModeSelect_Modes.modeSelect_TableInfo;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -53,7 +51,6 @@ namespace ICE.Scheduler.Tasks
                     new(() => CheckTabs(), "Checking tabs for valid missions")
                 );
         }
-        private static int GrabMission_Counter = 0;
         private static void ReOpenMissionUi(string tag)
         {
             if (GenericHelpers.TryGetAddonMaster<WKSHud>("WKSHud", out var moonHud) && moonHud.IsAddonReady)
@@ -105,21 +102,13 @@ namespace ICE.Scheduler.Tasks
 
             var playerTerritory = Player.Territory.RowId;
 
-            var SinusCount = CosmicHelper.SheetMissionDict
-                .Where(x => C.MissionConfig[x.Key].Enabled)
-                .Where(x => x.Value.TerritoryId == 1237);
-            var PhaennaCount = CosmicHelper.SheetMissionDict
-                .Where(x => C.MissionConfig[x.Key].Enabled)
-                .Where(x => x.Value.TerritoryId == 1291);
-            var OizysCount = CosmicHelper.SheetMissionDict
-                .Where(x => C.MissionConfig[x.Key].Enabled)
-                .Where(x => x.Value.TerritoryId == 1310);
+            var enabledPerMoon = string.Join("\n",
+                CosmicMoonRegistry.All.Select(m =>
+                    $"{m.DisplayName} [{m.TerritoryId}] = [{CosmicMoonRegistry.CountEnabledMissions(m.TerritoryId)}]"));
 
             IceLogging.Info("This is just general message to let me know WHAT planet you're on, and where you have things enabled\n" +
                 "If you're not running things that requires these to be enabled, you can ignore this if you're reading this.\n" +
-                $"Sinus [1237] = [{SinusCount.Count()}]\n" +
-                $"Phaenna [1291] = [{PhaennaCount.Count()}]\n" +
-                $"Oizys [1310] = [{OizysCount.Count()}]\n" +
+                $"{enabledPerMoon}\n" +
                 $"Current TerritoryID: {playerTerritory}");
 
             var modeSelected = Mission_Settings.Mode;
@@ -262,7 +251,7 @@ namespace ICE.Scheduler.Tasks
             {
                 if (modeSelected == ModeSelect.RelicMode && C.XPRelicOnlyEnabled)
                 {
-                    IceLogging.ChatInfo(T("\"Only selected missions\" is enabled for Relic Grind, but no selected missions match your current job. Please select missions for this job, switch jobs, or disable the option."), "[I.C.E.]");
+                    IceLogging.ChatInfo("\"Only selected missions\" is enabled for Relic Grind, but no selected missions match your current job. Please select missions for this job, switch jobs, or disable the option.", "[I.C.E.]");
                     if (C.PlaySoundAlert)
                     {
                         _ = SoundPlayer.PlaySoundAsync();
@@ -438,7 +427,7 @@ namespace ICE.Scheduler.Tasks
                         }
                         case MissionTypes.DroneSearch:
                         {
-                            if (C.Cosmodrone_Run && (PlayerHelper.IsInOizys()||PlayerHelper.IsInAuxesia()))
+                            if (C.Cosmodrone_Run && CosmicMoonRegistry.TryGetMoon(Player.Territory.RowId, out var hub) && hub.HasCosmodrome)
                             {
                                 P.TaskManager.Enqueue(() => Task_ArtifactSearch.RefreshMapInfo(), "Inserting Drone Task");
                             }
@@ -848,41 +837,6 @@ namespace ICE.Scheduler.Tasks
             }
         }
         private static Vector3 randomFishingHole = Vector3.Zero;
-
-        private static bool TryDailyRoutinesTeleportToPersonalReturn(Vector3 destination, string tag)
-        {
-            if (!C.PersonalReturnUseDailyRoutinesTP)
-                return false;
-
-            if (Player.DistanceTo(destination) < 3f)
-                return false;
-
-            if (!Utils.HasPlugin("DailyRoutines"))
-            {
-                if (EzThrottler.Throttle("PersonalReturnMissingDailyRoutines", 8000))
-                {
-                    IceLogging.Warning("未检测到 Daily Routines，已回退原有寻路。", tag);
-                }
-                return false;
-            }
-
-            if (EzThrottler.Throttle("PersonalReturnDailyRoutinesTeleport", 2500))
-            {
-                var command = string.Format(
-                    CultureInfo.InvariantCulture,
-                    "/pdrtp pos {0:F2} {1:F2} {2:F2}",
-                    destination.X,
-                    destination.Y,
-                    destination.Z);
-
-                Svc.Commands.ProcessCommand(command);
-                IceLogging.Debug($"已尝试 Daily Routines 传送：{command}", tag);
-                return true;
-            }
-
-            return false;
-        }
-
         private static bool? CheckForMovementRequired(uint missionId)
         {
             string tag = "[Check Missions: Movement Check]";
@@ -906,7 +860,7 @@ namespace ICE.Scheduler.Tasks
                 var mapId = sheetInfo.MapPosition;
                 var gatherInfo = GatheringRouteLoader.GetRoute(missionTerritory, mapId);
 
-                if (gatherInfo.Count == 0)
+                if (gatherInfo == null || gatherInfo.Count == 0)
                 {
                     IceLogging.Error("Hey, so this is actually missing the information for it. So going to just actually add it to the unsupported mission list", tag);
                     UnsupportedMissions.Ids.Add(missionId);
@@ -916,24 +870,17 @@ namespace ICE.Scheduler.Tasks
                 {
                     var startNode = gatherInfo[0];
 
-                    if (Task_Gather.IsInsideMissionGatherCircle(sheetInfo))
+                    foreach (var node in gatherInfo)
                     {
-                        Task_Gather.MarkMissionEntryPrepared(missionId);
-                        IceLogging.Info("Already inside mission gathering circle, continuing to grab mission", tag);
-                        return true;
+                        if (Player.DistanceTo(node.Position) < 5)
+                        {
+                            IceLogging.Info("We're close enough to the node! So continuing onto grabbing the mission", tag);
+                            return true;
+                        }
                     }
 
                     IceLogging.Verbose("If we've gotten this far, that means we need to figure out a path to go to the node. Doing so now", tag);
-
-                    // CN-MAINT: Gather mission entry rule: outside flag circle -> TP once, fallback nav if TP unavailable.
-                    if (Task_Gather.TryDailyRoutinesTeleportToGatherLandZone(startNode.LandZone, tag))
-                    {
-                        Task_Gather.MarkMissionEntryPrepared(missionId);
-                        return false;
-                    }
-
                     Task_NavmeshMove.Enqueue_NavmeshTask(startNode.LandZone);
-                    Task_Gather.MarkMissionEntryPrepared(missionId);
                     return true;
                 }
             }
@@ -941,14 +888,15 @@ namespace ICE.Scheduler.Tasks
             {
                 var location = sheetInfo.MapPosition;
                 var territory = sheetInfo.TerritoryId;
-                var fishingHole = GatheringUtil.MoonFishingLocations[territory][location];
-
-                if (fishingHole == null || fishingHole.Count == 0)
+                if (!GatheringUtil.MoonFishingLocations.TryGetValue(territory, out var zoneFishing)
+                    || !zoneFishing.TryGetValue(location, out var fishingHole)
+                    || fishingHole.Count == 0)
                 {
                     IceLogging.Error("We've seemed to have ran into a problem with the fishing hole... either it's missing spots, or it doesn't exist. Please report back to me on this with logs leading up to this\n" +
                         $"Mission ID: {missionId} | Map Position: {location} | Moon Territory: {territory}\n" +
                         $"Adding to the unsupported list so it's marked on your side for now", tag);
                     UnsupportedMissions.Ids.Add(missionId);
+                    return true;
                 }
 
                 var customFishingHole = C.Personal_FishLocation.Where(x => x.MapCoords == location).FirstOrDefault();
@@ -961,34 +909,27 @@ namespace ICE.Scheduler.Tasks
                         if (Player.DistanceTo(fishingLoc.Value) < 3)
                         {
                             IceLogging.Info($"We have a custom fishing hole set, and we're close to it. {fishingLoc.Value}", tag);
-                            Task_Fishing.MarkMissionEntryPrepared(missionId);
                             randomFishingHole = Vector3.Zero;
                             return true;
                         }
                         else
                         {
-                            if (Task_Fishing.TryDailyRoutinesTeleportToFishingSpot(fishingLoc.Value, tag))
-                            {
-                                Task_Fishing.MarkMissionEntryPrepared(missionId);
-                                randomFishingHole = Vector3.Zero;
-                                return false;
-                            }
-
                             IceLogging.Verbose($"We have a custom fishing hole set, and we're not within fishing range. Queueing up moving to it: {fishingLoc.Value}");
                             Task_NavmeshMove.Enqueue_NavmeshTask(fishingLoc.Value);
-                            Task_Fishing.MarkMissionEntryPrepared(missionId);
                             randomFishingHole = Vector3.Zero;
                             return true;
                         }
                     }
                 }
 
-                if (Task_Fishing.IsInsideMissionFishingCircle(sheetInfo))
+                foreach (var fishingSpot in fishingHole)
                 {
-                    Task_Fishing.MarkMissionEntryPrepared(missionId);
-                    IceLogging.Info("Already inside mission fishing circle, continuing to grab mission", tag);
-                    randomFishingHole = Vector3.Zero;
-                    return true;
+                    if (Player.DistanceTo(fishingSpot.FishingSpot) < 3)
+                    {
+                        IceLogging.Info($"We've reached our fishing spot! We are current at: {fishingSpot.FishingSpot}", tag);
+                        randomFishingHole = Vector3.Zero;
+                        return true;
+                    }
                 }
 
                 if (randomFishingHole == Vector3.Zero)
@@ -1003,15 +944,8 @@ namespace ICE.Scheduler.Tasks
                 }
                 else
                 {
-                    if (Task_Fishing.TryDailyRoutinesTeleportToFishingSpot(randomFishingHole, tag))
-                    {
-                        Task_Fishing.MarkMissionEntryPrepared(missionId);
-                        return false;
-                    }
-
                     IceLogging.Verbose("If we've gotten this far, that means we need to figure out a path to go to the node. Doing so now");
                     Task_NavmeshMove.Enqueue_NavmeshTask(randomFishingHole);
-                    Task_Fishing.MarkMissionEntryPrepared(missionId);
                     randomFishingHole = Vector3.Zero;
                     return true;
                 }
@@ -1028,11 +962,6 @@ namespace ICE.Scheduler.Tasks
                     var territory = Player.Territory.RowId;
                     if (C.CrafterLocations.TryGetValue(territory, out var location))
                     {
-                        if (TryDailyRoutinesTeleportToPersonalReturn(location, tag))
-                        {
-                            return false;
-                        }
-
                         IceLogging.Verbose("If we've gotten this far, that means we need to figure out a path to go to the node. Doing so now");
                         Task_NavmeshMove.Enqueue_NavmeshTask(location);
                         return true;
@@ -1148,9 +1077,9 @@ namespace ICE.Scheduler.Tasks
                 if (testMission != null)
                 {
                     var attribute = CosmicHelper.SheetMissionDict[testMission.MissionId].Attributes;
-                    bool nonStandard = attribute.HasFlag(MissionAttributes.ProvisionalSequential) || attribute.HasFlag(MissionAttributes.ProvisionalTimed) 
+                    bool nonStandard = attribute.HasFlag(MissionAttributes.ProvisionalSequential) || attribute.HasFlag(MissionAttributes.ProvisionalTimed)
                                     || attribute.HasFlag(MissionAttributes.ProvisionalWeather) || attribute.HasFlag(MissionAttributes.Critical);
-             
+
                     if (nonStandard)
                     {
                         if (FrameThrottler.Throttle("Selecting proper tab", 8))
@@ -1456,15 +1385,15 @@ namespace ICE.Scheduler.Tasks
         private static void Notes()
         {
             /*
-             * This is kind of my place to just... figure out how tf the logic is going to work. 
-             * Right now, the logic is 
+             * This is kind of my place to just... figure out how tf the logic is going to work.
+             * Right now, the logic is
              * 1: Store all the missions in the dictionary.
              *   - This doesn't matter if what kind of mode, we're just storing it. It should... allow for re-rolling of missions even when in relic mode on weird edge cases (aka, only selected missions for some reason)
-             * 2: Added in logic for checking each tab, and adding drone checking somewhere in there. 
-             *   - The way this works should be: Check each tab for a mission. If one exist in that place, we're just going to clear the queue -> just proceed to the grab mission task 
+             * 2: Added in logic for checking each tab, and adding drone checking somewhere in there.
+             *   - The way this works should be: Check each tab for a mission. If one exist in that place, we're just going to clear the queue -> just proceed to the grab mission task
              *   - If not, then it continues onto the next kind
              *   - Drone mode is in there as a general "Hey, we gonna check to see if we can open a drone/have a drone running -> find it between missions (this is nice cause it allows users to dictate when they're going to go looking for a box in case of weather. red alert...)
-             * 3: If we get to this point in the queue and we STILL haven't grabbed a mission, it means that we need to reroll for one. 
+             * 3: If we get to this point in the queue and we STILL haven't grabbed a mission, it means that we need to reroll for one.
              *   - Logic will be the same here as before. Check to see what ones need to be rerolled if possible
              *
             */

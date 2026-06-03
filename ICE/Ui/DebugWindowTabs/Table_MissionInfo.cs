@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.ImGuiFileDialog;
+using Dalamud.Interface.ImGuiFileDialog;
 using Dalamud.Interface.Textures;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Client.Game.WKS;
@@ -8,7 +8,6 @@ using Lumina.Excel.Sheets;
 using System.Collections.Generic;
 using System.IO;
 using System.Text;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.DebugWindowTabs
 {
@@ -53,6 +52,43 @@ namespace ICE.Ui.DebugWindowTabs
             {
                 ImGui.SetClipboardText(GenerateMissionScoreDictionaryCode());
             }
+            ImGui.SameLine();
+
+            if (ImGui.Button("Copy Missing CSV"))
+            {
+                var text = MissionScoresGenerator.BuildCsvText(includeHeader: true);
+                var count = MissionScoresGenerator.CountMissing();
+                if (count > 0)
+                {
+                    ImGui.SetClipboardText(text);
+                    statusMessage = $"Copied {count} missing MissionScores rows (bronze) to clipboard";
+                }
+                else
+                    statusMessage = "No missing rows — embedded CSV covers all missions with bronze scores.";
+            }
+            if (ImGui.IsItemHovered())
+            {
+                ImGui.BeginTooltip();
+                ImGui.Text("Rows for missions not in MissionScores.csv, using BronzeScore from sheets.");
+                ImGui.Text("Paste at end of Resources/MissionScores.csv");
+                ImGui.EndTooltip();
+            }
+
+            ImGui.SameLine();
+
+            if (ImGui.Button("Copy Auxesia CSV"))
+            {
+                var text = MissionScoresGenerator.BuildCsvText(CosmicMoonRegistry.Auxesia.TerritoryId, includeHeader: false);
+                var count = MissionScoresGenerator.CountMissing(CosmicMoonRegistry.Auxesia.TerritoryId);
+                if (count > 0)
+                {
+                    ImGui.SetClipboardText(text);
+                    statusMessage = $"Copied {count} Auxesia rows to clipboard";
+                }
+                else
+                    statusMessage = "No missing Auxesia MissionScores rows.";
+            }
+
             ImGui.SameLine();
 
             if (ImGui.Button(T("Export Fishing Missions")))
@@ -107,6 +143,17 @@ namespace ICE.Ui.DebugWindowTabs
                         }
                     }
                 );
+            }
+
+            ImGui.SameLine();
+            if (ImGui.Button("Export Missing CSV"))
+            {
+                if (string.IsNullOrWhiteSpace(exportPath))
+                    statusMessage = "Set export path first (or use Copy Missing CSV)";
+                else if (MissionScoresGenerator.TryExportMissingRows(exportPath, out var msg))
+                    statusMessage = msg;
+                else
+                    statusMessage = msg;
             }
 
             ImGui.SameLine();
@@ -345,7 +392,7 @@ namespace ICE.Ui.DebugWindowTabs
                         if (ImGui.IsItemHovered())
                         {
                             ImGui.BeginTooltip();
-                            ImGui.Text(T("Id: {0}", item.Key));
+                            ImGui.Text($"Id: {item.Key}");
                             ImGui.EndTooltip();
                         }
 

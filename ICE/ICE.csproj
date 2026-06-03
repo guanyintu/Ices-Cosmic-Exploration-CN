@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<Project Sdk="Dalamud.NET.Sdk/14.0.2">
+<Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
 	<PropertyGroup>
-                <Version>0.0.78.1</Version>
+		<Version>0.0.78.2</Version>
 		<Description>Who said we couldn't explore the moon!.</Description>
 		<PackageProjectUrl>https://github.com/goatcorp/ICE</PackageProjectUrl>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
@@ -13,15 +13,6 @@
 		<IncludeSourceRevisionInInformationalVersion>false</IncludeSourceRevisionInInformationalVersion>
 		<NoWarn>CS8618; CS8625; CS8629; </NoWarn>
 	</PropertyGroup>
-
-	<PropertyGroup Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-		<DalamudLibPath Condition="Exists('$(appdata)\\XIVLauncherCN\\addon\\Hooks\\dev\\')">$(appdata)\XIVLauncherCN\addon\Hooks\dev\</DalamudLibPath>
-		<AssemblySearchPaths Condition="Exists('$(DalamudLibPath)')">$(AssemblySearchPaths);$(DalamudLibPath)</AssemblySearchPaths>
-	</PropertyGroup>
-
-	<Target Name="RestoreLocalization" BeforeTargets="BeforeCompile" Condition="$([MSBuild]::IsOSPlatform('Windows'))">
-		<Exec Command='powershell -NoProfile -ExecutionPolicy Bypass -File "$(MSBuildProjectDirectory)\Build\RestoreLocalization.ps1" -ProjectDir "$(MSBuildProjectDirectory)"' />
-	</Target>
 
 	<ItemGroup>
 		<Content Include="ICE.json" />
@@ -63,19 +54,15 @@
 	</ItemGroup>
 
 	<ItemGroup>
+		<PackageReference Include="ECommons" Version="3.2.1.6" />
 		<PackageReference Include="NAudio" Version="2.3.0" />
+		<PackageReference Include="Pictomancy" Version="1.0.9" />
 		<PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.6" />
 		<PackageReference Include="YamlDotNet" Version="18.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
-                <ProjectReference Include="..\ECommons\ECommons\ECommons.csproj">
-                        <AdditionalProperties>DalamudLibPath=$(DalamudLibPath)</AdditionalProperties>
-                </ProjectReference>
-                <ProjectReference Include="..\ffxiv_pictomancy\Pictomancy\Pictomancy.csproj">
-                        <AdditionalProperties>DalamudLibPath=$(DalamudLibPath)</AdditionalProperties>
-                </ProjectReference>
-                <ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+		<ProjectReference Include="..\OtterGui\OtterGui.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -85,5 +72,13 @@
 
 	<ItemGroup>
 	  <Folder Include="Resources\GatheringRoutes\1310_Oizys\" />
+	  <Folder Include="Resources\GatheringRoutes\1319_Auxesia\" />
 	</ItemGroup>
+
+	<!-- OtterGui depends on nested submodule OtterGuiInternal; init recursively if missing -->
+	<Target Name="EnsureOtterGuiSubmodules" BeforeTargets="BeforeBuild"
+	        Condition="!Exists('$(MSBuildThisFileDirectory)..\OtterGui\OtterGuiInternal\OtterGuiInternal.csproj')">
+		<Exec Command="git submodule update --init --recursive OtterGui"
+		      WorkingDirectory="$(MSBuildThisFileDirectory).." />
+	</Target>
 </Project>

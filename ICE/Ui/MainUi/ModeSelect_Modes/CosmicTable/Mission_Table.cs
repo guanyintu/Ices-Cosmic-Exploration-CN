@@ -1,12 +1,15 @@
-﻿using Dalamud.Interface;
+using Dalamud.Bindings.ImPlot;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using ICE.OldYamlConfig;
 using ICE.Utilities.Cosmic_Helper;
+using ICE.Utilities.GatheringHelper;
 using ICE.Utilities.ImGuiTools;
 using JetBrains.Annotations;
 using OtterGui;
 using OtterGui.Table;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using static ICE.ConfigFiles.Config;
 using static ICE.Utilities.Cosmic_Helper.CosmicHelper;
@@ -170,12 +173,11 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
 
             List<Column<MissionInfo>> headers = [
                 _enabledColumn, _completionColumn, _idColumn, _planetColumn,
-                _jobColumn, _missionColumn, _nameColumn, _classScoreColumn, 
-                _cosmoColumn, _lunarColumn, _droneColumn, _planetTokenColumn, 
+                _jobColumn, _missionColumn, _nameColumn, _classScoreColumn,
+                _cosmoColumn, _lunarColumn, _droneColumn, _planetTokenColumn,
                 _spmColumn,  _turninColumn, _allExpColumn];
 
 
-            /*
             var tierFlags = new (int tier, ItemFilter flag)[]
             {
                 (1, ItemFilter.HasI),   (2, ItemFilter.HasII),  (3, ItemFilter.HasIII),
@@ -188,7 +190,6 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 string tierName = tier switch { 1 => "I", 2 => "II", 3 => "III", 4 => "IV", 5 => "V", 6 => "VI", 7 => "VII", _ => "?" };
                 headers.Add(new RelicExpColumn(tier, flag) { Label = $"Exp {tierName}" });
             }
-            */
 
             headers.Add(_profileColumn, _notesColumn);
             this.Headers = [.. headers];
@@ -214,7 +215,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
             }
 
             public override int Compare(MissionInfo lhs, MissionInfo rhs)
-                => lhs.Enabled.CompareTo(rhs.Enabled);
+                => lhs.Enabled().CompareTo(rhs.Enabled());
 
             public override void DrawColumn(MissionInfo item, int _)
             {
@@ -251,7 +252,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
 
             public override bool FilterFunc(MissionInfo item)
             {
-                return item.Enabled ? FilterValue.HasFlag(ItemFilter.Enabled) : FilterValue.HasFlag(ItemFilter.Disabled);
+                return item.Enabled() ? FilterValue.HasFlag(ItemFilter.Enabled) : FilterValue.HasFlag(ItemFilter.Disabled);
             }
         }
         public sealed class NameColumn : VerticalCenterColumnString
@@ -260,6 +261,30 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
             public override string ToName(MissionInfo mission) => mission.SheetInfo.Name;
             public override void DrawColumn(MissionInfo mission, int _)
             {
+                if (UnsupportedMissions.Ids.Contains(mission.Id))
+                {
+                    ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle, "Hey, this mission is currently not supported.\n" +
+                        "I'm working on it currently, please give me time\n" +
+                        "Or in the case of fishing, give our big fisher strife time to make presets");
+                    ImGui.SameLine();
+                }
+
+                if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Gather))
+                {
+                    var gatherInfo = GatheringRouteLoader.GetRoute(mission.SheetInfo.TerritoryId, mission.SheetInfo.MapPosition);
+                    if (gatherInfo == null || gatherInfo.Count is 0)
+                        UnsupportedMissions.Ids.Add(mission.Id);
+                }
+                else if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Fish))
+                {
+                    if (!GatheringUtil.MoonFishingLocations.TryGetValue(mission.SheetInfo.TerritoryId, out var zoneFishing)
+                        || !zoneFishing.TryGetValue(mission.SheetInfo.MapPosition, out var fishingHole)
+                        || fishingHole.Count == 0)
+                    {
+                        UnsupportedMissions.Ids.Add(mission.Id);
+                    }
+                }
+
                 if (ImGui.Button(mission.SheetInfo.Name))
                 {
                     IceLogging.Verbose("Testing... if this fires off multiple times", "DEBUG TEST");
@@ -506,6 +531,15 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                         ImGui.SameLine();
                 }
             }
+
+            public override bool FilterFunc(MissionInfo mission)
+            {
+                var exps = mission.SheetInfo.RelicXpInfo.Where(x => x.Value > 0).ToList();
+
+                if (exps.Count == 0) return true;
+
+                return exps.Any(x => FilterValue.HasFlag(TierToFlag(x.Key)));
+            }
         }
         public sealed class RelicExpColumn : ItemFilterColumn
         {
@@ -561,8 +595,11 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
 
             public override bool FilterFunc(MissionInfo mission)
             {
-                var hasExp = mission.SheetInfo.RelicXpInfo.GetValueOrDefault(_tier) > 0;
-                return hasExp ? FilterValue.HasFlag(_flag) : true;
+                var exps = mission.SheetInfo.RelicXpInfo.Where(x => x.Value > 0).ToList();
+
+                if (exps.Count == 0) return true;
+
+                return exps.Any(x => FilterValue.HasFlag(TierToFlag(x.Key)));
             }
         }
         public sealed class MissionColumn : MissionFilterColumn
@@ -815,8 +852,9 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
             public PlanetColumn()
             {
                 Flags = ImGuiTableColumnFlags.None;
-                SetFlags(ItemFilter.Sinus, ItemFilter.Phaenna, ItemFilter.Oizys, ItemFilter.Auxesia);
-                SetNames("Sinus", "Phaenna", "Oizys", "Auxesia");
+                var moons = CosmicMoonRegistry.All;
+                SetFlags(moons.Select(m => m.PlanetFilter).ToArray());
+                SetNames(moons.Select(m => m.DisplayName).ToArray());
             }
 
             public override int Compare(MissionInfo lhs, MissionInfo rhs) => lhs.SheetInfo.TerritoryId.CompareTo(rhs.SheetInfo.TerritoryId);
@@ -829,29 +867,13 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 var columnWidth = ImGui.GetColumnWidth();
                 ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (columnWidth - frameHeight) / 2);
 
-                string planetIcon = item.SheetInfo.TerritoryId switch
-                {
-                    1237 => "ICE.Resources.Sinus_Ardorum.png",
-                    1291 => "ICE.Resources.Phaenna.png",
-                    1310 => "ICE.Resources.Oizys.png",
-                    1319 => "ICE.Resources.Auxesia.png",
-                    _ => "ICE.Resources.Sinus_Ardorum.png",
-                };
+                var planetIcon = CosmicMoonRegistry.GetIconResource(item.SheetInfo.TerritoryId);
 
                 var texture = Svc.Texture.GetFromManifestResource(Assembly.GetExecutingAssembly(), planetIcon).GetWrapOrEmpty();
                 ImGui.Image(texture.Handle, size);
             }
-            public override bool FilterFunc(MissionInfo item)
-            {
-                return item.SheetInfo.TerritoryId switch
-                {
-                    1237 => FilterValue.HasFlag(ItemFilter.Sinus),
-                    1291 => FilterValue.HasFlag(ItemFilter.Phaenna),
-                    1310 => FilterValue.HasFlag(ItemFilter.Oizys),
-                    1319 => FilterValue.HasFlag(ItemFilter.Auxesia),
-                    _ => false
-                };
-            }
+            public override bool FilterFunc(MissionInfo item) =>
+                CosmicMoonRegistry.ItemFilterIncludesTerritory(FilterValue, item.SheetInfo.TerritoryId);
         }
         public sealed class JobColumn : JobFilterColumn
         {
@@ -1010,7 +1032,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             ImGui.Text($"Fishing profile: {sheetInfo.Name}");
                             ImGui.Separator();
                             bool builtInPreset = config.Use_BuildinPreset;
-                            if (ImGui.Checkbox("Use Built In Preset", ref builtInPreset))
+                            if (ImGui.Checkbox(T("Use Built In Preset"), ref builtInPreset))
                             {
                                 config.Use_BuildinPreset = builtInPreset;
                                 C.Save();
@@ -1021,7 +1043,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             {
                                 string presetName = config.AutoHookPresetName;
                                 ImGui.SetNextItemWidth(200);
-                                if (ImGui.InputText("Preset Name", ref presetName))
+                                if (ImGui.InputText(T("Preset Name"), ref presetName))
                                 {
                                     config.AutoHookPresetName = presetName;
                                     C.Save();
@@ -1108,7 +1130,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("The following missions are required to have gold before you can do this one");
+                        ImGui.Text(T("The following missions are required to have gold before you can do this one"));
                         foreach (var mission in sheetInfo.MissionUnlock)
                         {
                             ImGui_Ice.CompletionStatusIcon(CosmicHelper.SheetMissionDict[mission]);
@@ -1123,7 +1145,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
         public static void CrafterManagement(CosmicHelper.CosmicInfo mission, uint id, ImGuiTreeNodeFlags openDefault = ImGuiTreeNodeFlags.DefaultOpen)
         {
             var job = mission.Jobs.First(x => CosmicHelper.CrafterJobList.Contains(x));
-            ImGui.Text("Recipe Detailed Info");
+            ImGui.Text(T("Recipe Detailed Info"));
 
             Dictionary<ushort, CosmicHelper.CraftingInfo> missionCrafts = new();
             foreach (var craft in mission.Crafts_Main)
@@ -1133,13 +1155,13 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
 
             bool massApplyButton = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
 
-            if (ImGui.CollapsingHeader("Craft Item Settings", openDefault))
+            if (ImGui.CollapsingHeader(T("Craft Item Settings"), openDefault))
             {
                 using (ImRaii.Disabled(!massApplyButton))
                 {
                     ImGui.PushID(id);
 
-                    if (ImGui.Button("Apply to similar missions"))
+                    if (ImGui.Button(T("Apply to similar missions")))
                     {
                         var currentMission = CosmicHelper.SheetMissionDict[id];
                         var recipeConfig = C.MissionConfig[id];
@@ -1216,7 +1238,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 }
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled) && !massApplyButton)
                 {
-                    ImGui.SetTooltip("Hold shift to allow applying");
+                    ImGui.SetTooltip(T("Hold shift to allow applying"));
                 }
 
                 foreach (var craft in missionCrafts)
@@ -1237,7 +1259,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
 
                             ImGui.TableNextRow();
                             ImGui.TableSetColumnIndex(0);
-                            if (ImGui.Checkbox("Use Global Artisan Settings", ref globalArtisan))
+                            if (ImGui.Checkbox(T("Use Global Artisan Settings"), ref globalArtisan))
                             {
                                 recipeConfig.UseGlobal = globalArtisan;
                                 C.Save();
@@ -1352,7 +1374,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                 ImGuiEx.Icon(new Vector4(1.0f, 0.4f, 0.0f, 1.0f), FontAwesomeIcon.Diamond);
                                 if (ImGui.IsItemHovered())
                                 {
-                                    ImGui.SetTooltip("Expert Craft");
+                                    ImGui.SetTooltip(T("Expert Craft"));
                                 }
                             }
 
@@ -1367,7 +1389,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             ImGui.Text($"{craft.Value.ItemName}");
 
                             ImGui.TableNextColumn();
-                            ImGui.Text("Solver");
+                            ImGui.Text(T("Solver"));
 
                             ImGui.TableNextColumn();
                             ImGui.SetNextItemWidth(recipe_ComboWidth);
@@ -1410,7 +1432,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                 string macroName = recipeConfig.MacroName;
                                 ImGui.SameLine();
                                 ImGui.SetNextItemWidth(200);
-                                if (ImGui.InputText("Macro Name", ref macroName))
+                                if (ImGui.InputText(T("Macro Name"), ref macroName))
                                 {
                                     recipeConfig.MacroName = macroName;
                                     C.Save();
@@ -1429,14 +1451,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             if (supportedArtisan)
                             {
                                 ImGui.TableNextColumn();
-                                ImGui.Text("Food");
+                                ImGui.Text(T("Food"));
 
                                 ImGui.TableNextColumn();
                                 ImGui.SetNextItemWidth(recipe_ComboWidth);
                                 if (ImGui.BeginCombo("##FoodSelection", recipe_FoodLabel))
                                 {
                                     bool isDefaultSelected = recipeConfig.FoodId == 0;
-                                    if (ImGui.Selectable("Default", isDefaultSelected))
+                                    if (ImGui.Selectable(T("Default"), isDefaultSelected))
                                     {
                                         recipeConfig.FoodId = 0;
                                         recipeConfig.FoodHQ = false;
@@ -1484,7 +1506,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             if (supportedArtisan)
                             {
                                 ImGui.TableNextColumn();
-                                ImGui.Text("Potion");
+                                ImGui.Text(T("Potion"));
 
                                 ImGui.TableNextColumn();
                                 ImGui.SetNextItemWidth(recipe_ComboWidth);
@@ -1492,7 +1514,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                 {
                                     // Default option
                                     bool isDefaultSelected = recipeConfig.PotionId == 0;
-                                    if (ImGui.Selectable("Default", isDefaultSelected))
+                                    if (ImGui.Selectable(T("Default"), isDefaultSelected))
                                     {
                                         recipeConfig.PotionId = 0;
                                         recipeConfig.PotionHQ = false;
@@ -1541,7 +1563,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             {
                                 ImGui.TableNextColumn();
                                 ImGui.AlignTextToFramePadding();
-                                ImGui.Text("Manual");
+                                ImGui.Text(T("Manual"));
 
                                 ImGui.TableNextColumn();
                                 ImGui.SetNextItemWidth(recipe_ComboWidth);
@@ -1549,7 +1571,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                 {
                                     // Default option
                                     bool isDefaultSelected = recipeConfig.ManualId == 0;
-                                    if (ImGui.Selectable("Default", isDefaultSelected))
+                                    if (ImGui.Selectable(T("Default"), isDefaultSelected))
                                     {
                                         recipeConfig.ManualId = 0;
                                         C.Save();
@@ -1590,7 +1612,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                             {
                                 ImGui.TableNextRow();
                                 ImGui.TableSetColumnIndex(1);
-                                ImGui.Text("Squadron Manual");
+                                ImGui.Text(T("Squadron Manual"));
 
                                 ImGui.TableNextColumn();
                                 ImGui.SetNextItemWidth(recipe_ComboWidth);
@@ -1598,7 +1620,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                 {
                                     // Default option
                                     bool isDefaultSelected = recipeConfig.SquadronManualId == 0;
-                                    if (ImGui.Selectable("Default", isDefaultSelected))
+                                    if (ImGui.Selectable(T("Default"), isDefaultSelected))
                                     {
                                         recipeConfig.SquadronManualId = 0;
                                         C.Save();
@@ -1715,7 +1737,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                                     if (mission.TemporaryActionId == 41269 && !globalArtisan)
                                     {
                                         ImGui.TableSetColumnIndex(1);
-                                        ImGui.Text("Use after this many steps");
+                                        ImGui.Text(T("Use after this many steps"));
 
                                         ImGui.TableNextColumn();
                                         var minSteps = recipeConfig.MinStepsForMiracle;
@@ -1743,5 +1765,16 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 }
             }
         }
+        private static ItemFilter TierToFlag(int tier) => tier switch
+        {
+            1 => ItemFilter.HasI,
+            2 => ItemFilter.HasII,
+            3 => ItemFilter.HasIII,
+            4 => ItemFilter.HasIV,
+            5 => ItemFilter.HasV,
+            6 => ItemFilter.HasVI,
+            7 => ItemFilter.HasVII,
+            _ => ItemFilter.HasI
+        };
     }
 }

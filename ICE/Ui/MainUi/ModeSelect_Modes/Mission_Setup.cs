@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface;
+using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.GameHelpers;
@@ -19,13 +19,13 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
             { "Warrior", 21 },
             { "Dark Knight", 32 },
             { "Gunbreaker", 37 },
-    
+
             // Healers
             { "White Mage", 24 },
             { "Scholar", 28 },
             { "Astrologian", 33 },
             { "Sage", 40 },
-    
+
             // Melee DPS
             { "Monk", 20 },
             { "Dragoon", 22 },
@@ -33,19 +33,18 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
             { "Samurai", 34 },
             { "Reaper", 39 },
             { "Viper", 41 },
-    
+
             // Physical Ranged DPS
             { "Bard", 23 },
             { "Machinist", 31 },
             { "Dancer", 38 },
-    
+
             // Magical Ranged DPS
             { "Black Mage", 25 },
             { "Summoner", 27 },
             { "Red Mage", 35 },
             { "Pictomancer", 42 }
         };
-        private static string newListName = "";
 
         public static Mission_Table? MissionTable;
         private static List<CosmicHelper.MissionInfo> TableItems = [];
@@ -136,7 +135,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     {
                         ImGui.BeginTooltip();
 
-                        ImGui.Text("It appears that you have on of the following enabled");
+                        ImGui.Text(T("It appears that you have on of the following enabled"));
                         if (C.StopOnceHitCosmicScore)
                             ImGui.BulletText($"Stop at Cosmic Score [{C.CosmicScoreCap:N0}]");
                         if (C.StopWhenLevel)
@@ -148,7 +147,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                         if (C.StopOnceRelicFinished)
                             ImGui.BulletText($"Stop once relic completed");
 
-                        ImGui.Text("So if you stop and you're unsure why... this might be why");
+                        ImGui.Text(T("So if you stop and you're unsure why... this might be why"));
 
                         ImGui.EndTooltip();
                     }
@@ -158,12 +157,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
 
                 bool unsupportedArtisan = false; // xpLeveling && CosmicHelper.CrafterJobList.Contains((uint)Player.Job);
-                bool unsupportedMoon = false; // PlayerHelper.IsInOizys() && xpLeveling;
+                bool unsupportedMoon = xpLeveling
+                    && CosmicMoonRegistry.TryGetMoon(Player.Territory.RowId, out var currentMoon)
+                    && !CosmicMoonRegistry.HasLevelingContent(currentMoon);
 
-                // TODO: Make sure to disable new moon for leveling / gathering. . . 
+                // Leveling on a hub requires QuickLevelList entries; gathering still needs route YAML per territory
                 using (ImRaii.Disabled(SchedulerMain.State != IceState.Idle || !usingSupportedJob || unsupportedMoon))
                 {
-                    if (ImGui.Button("Start", new Vector2(150 * scale, 0)))
+                    if (ImGui.Button(T("Start"), new Vector2(150 * scale, 0)))
                     {
                         SchedulerMain.EnablePlugin();
                     }
@@ -177,12 +178,12 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("Hey! You need to update artisan to use this mode, please update to at minimum:");
-                        ImGui.Text("4.0.4.29");
+                        ImGui.Text(T("Hey! You need to update artisan to use this mode, please update to at minimum:"));
+                        ImGui.Text(T("4.0.4.29"));
                         ImGui.EndTooltip();
                     }
                 }
-                else if (unsupportedMoon)
+                else if (unsupportedMoon && CosmicMoonRegistry.TryGetMoon(Player.Territory.RowId, out var unsupportedHub))
                 {
                     ImGui.SameLine(0, 10 * scale);
                     ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
@@ -190,8 +191,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("Hey! This moon is currently not supported for leveling yet. (It's also worse than sinus or phaenna)");
-                        ImGui.Text("Please wait till I get the time to focus on this");
+                        ImGui.Text($"Hey! {unsupportedHub.DisplayName} is not supported for leveling yet.");
+                        var missing = new List<string>();
+                        if (!CosmicMoonRegistry.HasLevelingContent(unsupportedHub))
+                            missing.Add("QuickLevelList missions");
+                        if (!CosmicMoonContent.HasGatheringRoutes(unsupportedHub.TerritoryId))
+                            missing.Add("gathering routes");
+                        if (missing.Count > 0)
+                            ImGui.Text($"Still needed: {string.Join(", ", missing)}.");
                         ImGui.EndTooltip();
                     }
                 }
@@ -205,7 +212,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     using (ImRaii.PushColor(ImGuiCol.ButtonHovered, new Vector4(0.9f, 0.3f, 0.3f, 1.0f)))
                     using (ImRaii.PushColor(ImGuiCol.ButtonActive, new Vector4(0.7f, 0.1f, 0.1f, 1.0f)))
                     {
-                        if (ImGui.Button("Stop", new Vector2(150 * scale, 0)))
+                        if (ImGui.Button(T("Stop"), new Vector2(150 * scale, 0)))
                         {
                             SchedulerMain.DisablePlugin();
                         }
@@ -215,7 +222,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 ImGui.SameLine(0, 10 * scale);
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
 
-                if (ImGui.Button("Mission Settings"))
+                if (ImGui.Button(T("Mission Settings")))
                 {
                     ImGui.OpenPopup("Mission Settings: Popup");
                 }
@@ -242,7 +249,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                         $"(So if you're on crp, but a bsm red alert pops up)");
 
                     bool removeGold = C.RemoveAfterGold;
-                    if (ImGui.Checkbox("Remove Mission Upon Gold Completion", ref removeGold))
+                    if (ImGui.Checkbox(T("Remove Mission Upon Gold Completion"), ref removeGold))
                     {
                         C.RemoveAfterGold = removeGold;
                         C.Save();
@@ -250,14 +257,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     using (ImRaii.Disabled(!removeGold))
                     {
                         bool keepARanks = C.KeepARanks;
-                        if (ImGui.Checkbox("Keep \"A Rank\" missions and below", ref keepARanks))
+                        if (ImGui.Checkbox(T("Keep \"A Rank\" missions and below"), ref keepARanks))
                         {
                             C.KeepARanks = keepARanks;
                             C.Save();
                         }
                     }
 
-                    ImGui.Checkbox("Stop after current mission", ref Mission_Settings.StopAfterCurrent);
+                    ImGui.Checkbox(T("Stop after current mission"), ref Mission_Settings.StopAfterCurrent);
                     bool relicTurnin = C.TurninRelic;
                     if (ImGui.Checkbox($"Turnin if relic is complete##RelicTurnin_GeneralSetting", ref relicTurnin))
                     {
@@ -268,7 +275,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     ImGui.TextDisabled("?");
                     if (ImGui.IsItemHovered())
                     {
-                        ImGui.SetTooltip("THIS IS YOUR HEADS UP ON HOW THIS WORKS. If I change this in the future, this tooltip will also change.\n" +
+                        ImGui.SetTooltip(T("THIS IS YOUR HEADS UP ON HOW THIS WORKS. If I change this in the future, this tooltip will also change.\n") +
                                          "1: This will check for your current CLASS [not menu class, actual current class] for relic turnin.\n" +
                                          "2: You must not have the tool eqipped for this to run full auto. \n" +
                                          "\t- This is due to the fact that I cba coding this in at this time. (might change my mind in the future *shrugs*)\n" +
@@ -279,14 +286,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
 
                     ImGui.Separator();
                     bool relic_AllowRedAlert = C.Relic_IncludeCriticals;
-                    if (ImGui.Checkbox("Allow Red Alerts for Relic", ref relic_AllowRedAlert))
+                    if (ImGui.Checkbox(T("Allow Red Alerts for Relic"), ref relic_AllowRedAlert))
                     {
                         C.Relic_IncludeCriticals = relic_AllowRedAlert;
                         C.Save();
                     }
 
                     bool OnlySelected = C.XPRelicOnlyEnabled;
-                    if (ImGui.Checkbox("Only selected missions", ref OnlySelected))
+                    if (ImGui.Checkbox(T("Only selected missions"), ref OnlySelected))
                     {
                         C.XPRelicOnlyEnabled = OnlySelected;
                         C.Save();

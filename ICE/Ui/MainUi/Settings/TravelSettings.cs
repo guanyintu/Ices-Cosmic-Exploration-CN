@@ -5,7 +5,6 @@ using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
 using ICE.Utilities.ImGuiTools;
 using static ICE.ConfigFiles.Config;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.MainUi.Settings.Settings_Table
 {
@@ -30,9 +29,6 @@ namespace ICE.Ui.MainUi.Settings.Settings_Table
 
             Separator();
             FishingLocations();
-
-            Separator();
-            DailyRoutinesExtensions();
         }
 
         private static void Separator()
@@ -48,32 +44,32 @@ namespace ICE.Ui.MainUi.Settings.Settings_Table
             ImGui.Dummy(new Vector2(0, 5));
 
             bool stellarSprint = C.MoonSprint;
-if (ImGui.Checkbox(T("Auto-Use Stellar Sprint"), ref stellarSprint))
+            if (ImGui.Checkbox(T("Auto-Use Stellar Sprint"), ref stellarSprint))
             {
                 C.MoonSprint = stellarSprint;
                 C.Save();
             }
 
             bool closestNode = C.ClosestNodeSelection;
-if (ImGui.Checkbox(T("Prioritize closest gathering node"), ref closestNode))
+            if (ImGui.Checkbox(T("Prioritize closest gathering node"), ref closestNode))
             {
                 C.ClosestNodeSelection = closestNode;
                 C.Save();
             }
             if (ImGui.IsItemHovered())
             {
-ImGui.SetTooltip(T("Always navigate to the closest targetable node instead of following the fixed route order.\nUseful for timed EX+ missions where speed matters."));
+                ImGui.SetTooltip(T("Always navigate to the closest targetable node instead of following the fixed route order.\nUseful for timed EX+ missions where speed matters."));
             }
 
             bool randomize = C.RandomizeWaypoints;
-if (ImGui.Checkbox(T("Randomize waypoint positions"), ref randomize))
+            if (ImGui.Checkbox(T("Randomize waypoint positions"), ref randomize))
             {
                 C.RandomizeWaypoints = randomize;
                 C.Save();
             }
             if (ImGui.IsItemHovered())
             {
-ImGui.SetTooltip(T("Adds a small random offset to navigation destinations so the character doesn't always follow the exact same path"));
+                ImGui.SetTooltip(T("Adds a small random offset to navigation destinations so the character doesn't always follow the exact same path"));
             }
             if (randomize)
             {
@@ -86,7 +82,7 @@ ImGui.SetTooltip(T("Adds a small random offset to navigation destinations so the
                     C.SaveDebounced();
                 }
                 bool showDebug = C.RandomizeWaypointsDebug;
-if (ImGui.Checkbox(T("Show random location debug target"), ref showDebug))
+                if (ImGui.Checkbox(T("Show random location debug target"), ref showDebug))
                 {
                     C.RandomizeWaypointsDebug = showDebug;
                     C.Save();
@@ -94,14 +90,14 @@ if (ImGui.Checkbox(T("Show random location debug target"), ref showDebug))
             }
 
             bool useHubReturn = C.UseHubReturn;
-if (ImGui.Checkbox(T("Use Hub Return"), ref useHubReturn))
+            if (ImGui.Checkbox(T("Use Hub Return"), ref useHubReturn))
             {
                 C.UseHubReturn = useHubReturn;
                 C.Save();
             }
             ImGui.SameLine();
             bool useAethernet = C.UseAethernet;
-if (ImGui.Checkbox(T("Use Aethernet"), ref useAethernet))
+            if (ImGui.Checkbox(T("Use Aethernet"), ref useAethernet))
             {
                 C.UseAethernet = useAethernet;
                 C.Save();
@@ -117,27 +113,27 @@ if (ImGui.Checkbox(T("Use Aethernet"), ref useAethernet))
             ImGui.TextDisabled(T("Beta, might not work"));
 
             bool avoidStellarReturn = C.AvoidStellarReturn;
-if (ImGui.Checkbox(T("Avoid Stellar Return for pathing"), ref avoidStellarReturn))
+            if (ImGui.Checkbox(T("Avoid Stellar Return for pathing"), ref avoidStellarReturn))
             {
                 C.AvoidStellarReturn = avoidStellarReturn;
                 C.Save();
             }
             if (ImGui.IsItemHovered())
             {
-ImGui.SetTooltip(T("When enabled, the pathfinder will not use Stellar Return to travel to gathering nodes.\nThis applies to both Hub Return and Hub + Aethernet travel methods."));
+                ImGui.SetTooltip(T("When enabled, the pathfinder will not use Stellar Return to travel to gathering nodes.\nThis applies to both Hub Return and Hub + Aethernet travel methods."));
             }
             if (C.AvoidStellarReturn)
             {
                 ImGui.SameLine();
                 bool exceptHub = C.AvoidStellarReturnExceptHub;
-if (ImGui.Checkbox(T("Except for hub activities"), ref exceptHub))
+                if (ImGui.Checkbox(T("Except for hub activities"), ref exceptHub))
                 {
                     C.AvoidStellarReturnExceptHub = exceptHub;
                     C.Save();
                 }
                 if (ImGui.IsItemHovered())
                 {
-ImGui.SetTooltip(T("When enabled, Stellar Return will still be used to return to the hub\nfor activities like credit purchases, gambling, drone bits, and repairs."));
+                    ImGui.SetTooltip(T("When enabled, Stellar Return will still be used to return to the hub\nfor activities like credit purchases, gambling, drone bits, and repairs."));
                 }
             }
 
@@ -150,7 +146,7 @@ ImGui.SetTooltip(T("When enabled, Stellar Return will still be used to return to
             }
 
             bool DisableRedAlertPathing = C.DisablePathfindingToRedAlert;
-if (ImGui.Checkbox(T("Disable Pathfinding to Red Alerts"), ref DisableRedAlertPathing))
+            if (ImGui.Checkbox(T("Disable Pathfinding to Red Alerts"), ref DisableRedAlertPathing))
             {
                 C.DisablePathfindingToRedAlert = DisableRedAlertPathing;
                 C.Save();
@@ -178,7 +174,7 @@ if (ImGui.Checkbox(T("Disable Pathfinding to Red Alerts"), ref DisableRedAlertPa
             ImGui.Dummy(new Vector2(0, 5));
 
             bool unstuckEnabled = C.JumpIfStuck_V2 || C.RetargetIfStuck;
-if (ImGui.Checkbox(T("If stuck during nav movement:"), ref unstuckEnabled))
+            if (ImGui.Checkbox(T("If stuck during nav movement:"), ref unstuckEnabled))
             {
                 if (unstuckEnabled)
                     C.JumpIfStuck_V2 = true;
@@ -190,31 +186,30 @@ if (ImGui.Checkbox(T("If stuck during nav movement:"), ref unstuckEnabled))
                 C.Save();
             }
             ImGui.SameLine();
-            ImGuiEx.HelpMarker(T(
+            ImGuiEx.HelpMarker(
                 "When stuck during navmesh movement for the configured delay:\n" +
                 "- Jump: attempts to jump over the obstacle\n" +
-                "- Retarget: stops and re-pathfinds to the destination (re-randomizes if enabled)"));
+                "- Retarget: stops and re-pathfinds to the destination (re-randomizes if enabled)");
             if (!unstuckEnabled) ImGui.BeginDisabled();
-if (ImGui.RadioButton(T("Jump"), C.JumpIfStuck_V2 && !C.RetargetIfStuck))
+            if (ImGui.RadioButton(T("Jump"), C.JumpIfStuck_V2 && !C.RetargetIfStuck))
             {
                 C.JumpIfStuck_V2 = true;
                 C.RetargetIfStuck = false;
                 C.Save();
             }
             ImGui.SameLine();
-if (ImGui.RadioButton(T("Retarget"), C.RetargetIfStuck))
+            if (ImGui.RadioButton(T("Retarget"), C.RetargetIfStuck))
             {
                 C.RetargetIfStuck = true;
                 C.JumpIfStuck_V2 = false;
                 C.Save();
             }
-
-            ImGui.Dummy(new Vector2(0, 4));
+            ImGui.SameLine();
             ImGui.Text(T("after"));
             ImGui.SameLine();
             int stuckDelay = C.StuckDelayMs;
-            ImGui.SetNextItemWidth(120);
-            if (ImGui.SliderInt("##StuckDelay", ref stuckDelay, 500, 3000))
+            ImGui.SetNextItemWidth(100);
+            if (ImGui.SliderInt("ms stuck###StuckDelay", ref stuckDelay, 500, 3000))
             {
                 if (C.StuckDelayMs != stuckDelay)
                 {
@@ -222,8 +217,6 @@ if (ImGui.RadioButton(T("Retarget"), C.RetargetIfStuck))
                     C.SaveDebounced();
                 }
             }
-            ImGui.SameLine();
-            ImGui.Text(T("ms stuck"));
             if (!unstuckEnabled) ImGui.EndDisabled();
         }
         private static void CraftingLocations()
@@ -232,7 +225,7 @@ if (ImGui.RadioButton(T("Retarget"), C.RetargetIfStuck))
             ImGui.Dummy(new Vector2(0, 5));
 
             bool usePersonalLocations = C.PersonalReturnSpot;
-if (ImGui.Checkbox(T("Use personal return spots"), ref usePersonalLocations))
+            if (ImGui.Checkbox(T("Use personal return spots"), ref usePersonalLocations))
             {
                 C.PersonalReturnSpot = usePersonalLocations;
                 C.Save();
@@ -244,7 +237,7 @@ if (ImGui.Checkbox(T("Use personal return spots"), ref usePersonalLocations))
                 ImGui.SameLine();
                 if (C.CrafterLocations.TryGetValue(territory, out var moonLoc))
                 {
-if (ImGui.Button(T("Set to current location")))
+                    if (ImGui.Button(T("Set to current location")))
                     {
                         C.CrafterLocations[territory] = location;
                         C.Save();
@@ -254,81 +247,33 @@ if (ImGui.Button(T("Set to current location")))
                 }
                 else
                 {
-if (ImGui.Button(T("Add Location")))
+                    if (ImGui.Button(T("Add Location")))
                     {
                         C.CrafterLocations[territory] = Player.Position;
                         C.Save();
                     }
                     ImGui.SameLine();
-ImGui.Text(T("No location set"));
+                    ImGui.Text(T("No location set"));
                 }
-            }
-        }
-        private static void DailyRoutinesExtensions()
-        {
-            ImGuiEx.IconWithText(FontAwesomeIcon.Plug, T("Daily Routines Extensions"));
-            ImGui.Dummy(new Vector2(0, 5));
-            ImGui.TextDisabled(T("Use Daily Routines teleport"));
-            ImGui.Dummy(new Vector2(0, 2));
-
-            // CN-MAINT: Daily Routines TP toggles rendered in two compact rows.
-            bool useFishingTp = C.FishingUseDailyRoutinesTP;
-            if (ImGui.Checkbox(T("Fishing Missions"), ref useFishingTp))
-            {
-                C.FishingUseDailyRoutinesTP = useFishingTp;
-                C.Save();
-            }
-
-            ImGui.SameLine();
-            bool useGatherTp = C.GatherUseDailyRoutinesTP;
-            if (ImGui.Checkbox(T("Gathering Missions"), ref useGatherTp))
-            {
-                C.GatherUseDailyRoutinesTP = useGatherTp;
-                C.Save();
-            }
-
-            ImGui.SameLine();
-            bool usePersonalReturnTp = C.PersonalReturnUseDailyRoutinesTP;
-            if (ImGui.Checkbox(T("Personal Return Spots"), ref usePersonalReturnTp))
-            {
-                C.PersonalReturnUseDailyRoutinesTP = usePersonalReturnTp;
-                C.Save();
-            }
-
-            bool useHubReturnTp = C.HubReturnUseDailyRoutinesTP;
-            if (ImGui.Checkbox(T("Return after shopping"), ref useHubReturnTp))
-            {
-                C.HubReturnUseDailyRoutinesTP = useHubReturnTp;
-                C.Save();
-            }
-
-            ImGui.SameLine();
-            bool useDroneTp = C.Cosmodrone_UseDailyRoutinesTP;
-            if (ImGui.Checkbox(T("Drone Missions"), ref useDroneTp))
-            {
-                C.Cosmodrone_UseDailyRoutinesTP = useDroneTp;
-                C.Save();
-            }
-
-            if (C.FishingUseDailyRoutinesTP || C.GatherUseDailyRoutinesTP || C.PersonalReturnUseDailyRoutinesTP || C.HubReturnUseDailyRoutinesTP || C.Cosmodrone_UseDailyRoutinesTP)
-            {
-                ImGui.TextWrapped(T("Tip: Ensure Daily Routines 'Quick Teleport Panel' is enabled. If teleport fails, it automatically falls back to normal navigation."));
             }
         }
         private static void FishingLocations()
         {
             ImGuiEx.IconWithText(FontAwesomeIcon.Fish, T("Personalized Fishing Spots"));
             ImGui.SameLine();
-            ImGui_Ice.IconWithTooltip(FontAwesomeIcon.QuestionCircle, T("A way for you to save your own positions if you choose to not use a randomized spot that's included in the plugin\nYou don't have to use this, it will just use a random spot if:\n1: A position is saved:\n2: A random spot even is saved"), false);
+            ImGui_Ice.IconWithTooltip(FontAwesomeIcon.QuestionCircle, "A way for you to save your own positions if you choose to not use a randomized spot that's included in the plugin\n" +
+                "You don't have to use this, it will just use a random spot if:\n" +
+                "1: A position is saved:\n" +
+                "2: A random spot even is saved", false);
             ImGui.Dummy(new Vector2(0, 5));
 
             var currentTerritory = Player.Territory.RowId;
 
             if (GatheringUtil.MoonFishingLocations.TryGetValue(currentTerritory, out var fishingHoles))
             {
-                ImGui.Text(T("Planet: {0}", Player.Territory.Value.PlaceName.Value.Name.ToString()));
+                ImGui.Text($"Planet: {Player.Territory.Value.PlaceName.Value.Name}");
                 ImGui.Checkbox(T("Show fishing spot raycast"), ref _fishingDebug.ShowFishRay);
-                if (PlayerHelper.LocalPlayer is { } player && _fishingDebug.ShowFishRay)
+                if (Player.Object is { } player && _fishingDebug.ShowFishRay)
                 {
                     _fishingDebug.Draw();
                 }
@@ -355,16 +300,16 @@ ImGui.Text(T("No location set"));
 
                     ImGui.PushID($"{hole}_Flag");
 
-                    if (ImGuiEx.IconButtonWithText(FontAwesomeIcon.Flag, T("  X: {0:N2} Y: {1:N2}", hole.X, hole.Y)))
+                    if (ImGuiEx.IconButtonWithText(FontAwesomeIcon.Flag, $"  X: {hole.X:N2} Y: {hole.Y:N2}"))
                     {
                         var mission = CosmicHelper.SheetMissionDict.Where(x => x.Value.MapPosition == hole).FirstOrDefault();
                         Utils.SetGatheringRing(mission.Value.TerritoryId, (int)hole.X, (int)hole.Y, mission.Value.Radius, $"{hole.X:N2} {hole.Y:N2}");
                     }
                     ImGui.SameLine();
 
-                    string currentPos = entry.WorldPosition == null ? T("Add New") : T("Remove");
+                    string currentPos = entry.WorldPosition == null ? "Add New" : $"Remove";
 
-                    if (ImGui.Button(currentPos))
+                    if (ImGui.Button($"{currentPos}"))
                     {
                         entry.WorldPosition = entry.WorldPosition == null ? Player.Position : null;
                         C.Save();
@@ -381,7 +326,7 @@ ImGui.Text(T("No location set"));
             }
             else
             {
-                ImGui.Text(T("Current planet has no stored fishing holes in the sheets. (Might need to be added?)"));
+                ImGui.Text($"Current planet has no stored fishing holes in the sheets. (Might need to be added?)");
             }
         }
     }

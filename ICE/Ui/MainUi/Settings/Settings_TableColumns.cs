@@ -1,4 +1,4 @@
-﻿using Dalamud.Interface.Utility.Raii;
+using Dalamud.Interface.Utility.Raii;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.ImGuiTools;
 
@@ -6,15 +6,15 @@ namespace ICE.Ui.MainUi.Settings;
 
 public static class Settings_TableColumns
 {
-    private static string[] missionSortOptions = 
-        ["Id", "Name", "Cosmo Credits", "Lunar Credits", 
-        "Exp I", "Exp II", "Exp III", "Exp IV", "Exp V", 
+    private static string[] missionSortOptions =
+        ["Id", "Name", "Cosmo Credits", "Lunar Credits",
+        "Exp I", "Exp II", "Exp III", "Exp IV", "Exp V",
         "Map Location", "Class Score", "Class Exp"];
 
     public static void ColumnSettings()
     {
         int missionSelectedOption = C.TableSortOption;
-        if (ImGui.BeginCombo("Sort By", missionSortOptions[missionSelectedOption]))
+        if (ImGui.BeginCombo(T("Sort By"), missionSortOptions[missionSelectedOption]))
         {
             for (int i = 0; i < missionSortOptions.Length; i++)
             {
@@ -37,14 +37,14 @@ public static class Settings_TableColumns
         }
 
         bool hideUnsupported = C.HideUnsupportedMissions;
-        if (ImGui.Checkbox("Hide Unsupported Missions", ref hideUnsupported))
+        if (ImGui.Checkbox(T("Hide Unsupported Missions"), ref hideUnsupported))
         {
             C.HideUnsupportedMissions = hideUnsupported;
             C.Save();
         }
 
         bool autoShowToken = C.Auto_ShowTokens;
-        if (ImGui.Checkbox("Auto Hide/Show Planet Tokens", ref autoShowToken))
+        if (ImGui.Checkbox(T("Auto Hide/Show Planet Tokens"), ref autoShowToken))
         {
             C.Auto_ShowTokens = autoShowToken;
             C.Save();
@@ -55,7 +55,7 @@ public static class Settings_TableColumns
         {
             using (ImRaii.Disabled(!(ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift))))
             {
-                if (ImGui.Checkbox("Show Manual Mode Column", ref showManualMode))
+                if (ImGui.Checkbox(T("Show Manual Mode Column"), ref showManualMode))
                 {
                     C.ShowManualMode = showManualMode;
                     if (!showManualMode)
@@ -68,14 +68,14 @@ public static class Settings_TableColumns
             if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
             {
                 ImGui.BeginTooltip();
-                ImGui.Text("MAKE SURE TO READ THE INFO ON THE RIGHT !");
-                ImGui.Text("If you've done so, you can hold shift to allow enabling this");
+                ImGui.Text(T("MAKE SURE TO READ THE INFO ON THE RIGHT !"));
+                ImGui.Text(T("If you've done so, you can hold shift to allow enabling this"));
                 ImGui.EndTooltip();
             }
         }
         else
         {
-            if (ImGui.Checkbox("Show Manual Mode Column", ref showManualMode))
+            if (ImGui.Checkbox(T("Show Manual Mode Column"), ref showManualMode))
             {
                 C.ShowManualMode = showManualMode;
                 if (!showManualMode)
@@ -128,27 +128,22 @@ public static class Settings_TableColumns
 
     private static TurninState HighestTurnin = TurninState.Gold;
 
-    private static bool AnyTurnin = true;
-    private static bool TurninGold = false;
-    private static bool TurninSilver = false;
-    private static bool TurninBronze = false;
-
     public static void GeneralMissionSettings()
     {
-        if (ImGui.Button("Quick Apply Turnins"))
+        if (ImGui.Button(T("Quick Apply Turnins")))
         {
             ImGui.OpenPopup("Quick Apply_Mission Turnins");
         }
 
         if (ImGui.BeginPopup("Quick Apply_Mission Turnins"))
         {
-            if (ImGui.RadioButton("Apply to all classes", ApplyToAllClasses))
+            if (ImGui.RadioButton(T("Apply to all classes"), ApplyToAllClasses))
             {
                 ApplyToAllClasses = true;
                 ApplyToSpecicClass = false;
             }
 
-            if (ImGui.RadioButton("Apply to specific class", ApplyToSpecicClass))
+            if (ImGui.RadioButton(T("Apply to specific class"), ApplyToSpecicClass))
             {
                 ApplyToAllClasses = false;
                 ApplyToSpecicClass = true;
@@ -160,25 +155,25 @@ public static class Settings_TableColumns
                 IceLogging.Debug($"Selected class: {classOptions[selectedClassIndex]}, ID: {SpecificClass}");
             }
             ImGui.Separator();
-            ImGui.Text("Select Turnin Options");
+            ImGui.Text(T("Select Turnin Options"));
             ImGui.Dummy(new Vector2(0, 2));
 
-            if (ImGui.RadioButton("Gold", HighestTurnin is TurninState.Gold))
+            if (ImGui.RadioButton(T("Gold"), HighestTurnin is TurninState.Gold))
             {
                 HighestTurnin = TurninState.Gold;
             }
-            if (ImGui.RadioButton("Silver", HighestTurnin is TurninState.Silver))
+            if (ImGui.RadioButton(T("Silver"), HighestTurnin is TurninState.Silver))
             {
                 HighestTurnin = TurninState.Silver;
             }
-            if (ImGui.RadioButton("Bronze", HighestTurnin is TurninState.Bronze))
+            if (ImGui.RadioButton(T("Bronze"), HighestTurnin is TurninState.Bronze))
             {
                 HighestTurnin = TurninState.Bronze;
             }
 
             ImGui.Separator();
 
-            if (ImGui.Button("Apply"))
+            if (ImGui.Button(T("Apply")))
             {
                 var amountApplied = 0;
                 foreach (var mission in C.MissionConfig)

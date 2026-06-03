@@ -1,9 +1,8 @@
-﻿using Dalamud.Interface.Utility;
+using Dalamud.Interface.Utility;
 using ECommons.GameHelpers;
 using ICE.Utilities.Cosmic_Helper;
 using Lumina.Excel.Sheets;
 using static ICE.ConfigFiles.Config;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.MainUi.Settings
 {
@@ -16,20 +15,20 @@ namespace ICE.Ui.MainUi.Settings
 
         public static unsafe void Draw_Old()
         {
-if (ImGui.Checkbox(T("Enable Auto Gamba"), ref gambaEnabled))
+            if (ImGui.Checkbox(T("Enable Auto Gamba"), ref gambaEnabled))
             {
                 C.GambaEnabled = gambaEnabled;
                 C.Save();
             }
             ImGuiEx.HelpMarker(T("If you want to let it auto select the wheels and gamba, enable this. If you want to not auto run when you're running the gamble wheel, disable this."));
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Mininum credits to keep"), ref gambaCreditsMinimum, 0, 10000))
+            if (ImGui.SliderInt(T("Mininum credits to keep"), ref gambaCreditsMinimum, 0, 10000))
             {
                 C.GambaCreditsMinimum = gambaCreditsMinimum;
                 C.SaveDebounced();
             }
             bool gambaBetween = C.GambaBetweenRuns;
-if (ImGui.Checkbox(T("Gamble Between Runs"), ref gambaBetween))
+            if (ImGui.Checkbox(T("Gamble Between Runs"), ref gambaBetween))
             {
                 C.GambaBetweenRuns = gambaBetween;
                 C.Save();
@@ -37,13 +36,13 @@ if (ImGui.Checkbox(T("Gamble Between Runs"), ref gambaBetween))
             ImGui.SameLine();
             GambaSlider();
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Gamba Delay"), ref gambaDelay, 50, 2000))
+            if (ImGui.SliderInt(T("Gamba Delay"), ref gambaDelay, 50, 2000))
             {
                 C.GambaDelay = gambaDelay;
                 C.SaveDebounced();
             }
 
-if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
+            if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
             {
                 C.GambaPreferSmallerWheel = gambaPreferSmallerWheel;
                 C.Save();
@@ -53,10 +52,11 @@ if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
             if (PlayerHelper.IsInCosmicZone())
             {
                 var territory = Player.Territory.RowId;
-                var itemId = CosmicHelper.PlanetCreditInfo[territory];
-                PlayerHelper.GetItemCount(itemId, out var credits);
-
-                ImGui.Text(T("Current location: {0} | Currency Amount: {1}", territory, credits));
+                if (CosmicMoonRegistry.TryGetPlanetCreditItemId(territory, out var itemId))
+                {
+                    PlayerHelper.GetItemCount(itemId, out var credits);
+                    ImGui.Text($"Current location: {territory} | Currency Amount: {credits}");
+                }
             }
 
             ImGui.Separator();
@@ -66,7 +66,7 @@ if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
             {
                 var itemsType = C.GambaItemWeights.Where(x => x.Type == type).OrderBy(x => x.ItemId).ToList();
                 if (itemsType.Count == 0) continue;
-                if (ImGui.TreeNodeEx($"{T(type.ToString())} ({itemsType.Count})##gamba_type_{type}", ImGuiTreeNodeFlags.DefaultOpen))
+                if (ImGui.TreeNodeEx($"{type} ({itemsType.Count})##gamba_type_{type}", ImGuiTreeNodeFlags.DefaultOpen))
                 {
                     ImGui.Indent();
                     foreach (var gamba in itemsType)
@@ -74,8 +74,7 @@ if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
                         var itemName = ExcelItemHelper.GetName(gamba.ItemId);
                         int weight = gamba.Weight;
                         ImGui.SetNextItemWidth(120f);
-                        var weightLabel = T("[{0}] {1}", gamba.ItemId, itemName);
-                        if (ImGui.InputInt(weightLabel + $"##gamba_weight_{gamba.ItemId}", ref weight))
+                        if (ImGui.InputInt($"[{gamba.ItemId}] {itemName}##gamba_weight", ref weight))
                         {
                             gamba.Weight = weight;
                             C.Save();
@@ -85,7 +84,7 @@ if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
                     ImGui.TreePop();
                 }
             }
-if (ImGui.Button(T("Reset Weights")))
+            if (ImGui.Button(T("Reset Weights")))
             {
                 Task_Gamba.EnsureGambaWeightsInitialized(true);
             }
@@ -94,33 +93,33 @@ if (ImGui.Button(T("Reset Weights")))
         public static unsafe void Draw()
         {
             bool gambaEnabled = C.GambaEnabled;
-if (ImGui.Checkbox(T("Enable Auto Gamba Wheel"), ref gambaEnabled))
+            if (ImGui.Checkbox(T("Enable Auto Gamba Wheel"), ref gambaEnabled))
             {
                 C.GambaEnabled = gambaEnabled;
                 C.Save();
             }
             ImGuiEx.HelpMarker(T("If you want to let it auto select the wheels and gamba, enable this. If you want to not auto run when you're running the gamble wheel, disable this."));
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Mininum credits to keep"), ref gambaCreditsMinimum, 0, 10000))
+            if (ImGui.SliderInt(T("Mininum credits to keep"), ref gambaCreditsMinimum, 0, 10000))
             {
                 C.GambaCreditsMinimum = gambaCreditsMinimum;
                 C.SaveDebounced();
             }
             bool gambaBetween = C.GambaBetweenRuns;
-if (ImGui.Checkbox(T("Gamble Between Runs"), ref gambaBetween))
+            if (ImGui.Checkbox(T("Gamble Between Runs"), ref gambaBetween))
             {
                 C.GambaBetweenRuns = gambaBetween;
                 C.Save();
             }
             GambaSlider();
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Gamba Delay"), ref gambaDelay, 50, 2000))
+            if (ImGui.SliderInt(T("Gamba Delay"), ref gambaDelay, 50, 2000))
             {
                 C.GambaDelay = gambaDelay;
                 C.SaveDebounced();
             }
 
-if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
+            if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
             {
                 C.GambaPreferSmallerWheel = gambaPreferSmallerWheel;
                 C.Save();
@@ -130,16 +129,17 @@ if (ImGui.Checkbox(T("Prefer smaller wheel"), ref gambaPreferSmallerWheel))
             if (PlayerHelper.IsInCosmicZone())
             {
                 var territory = Player.Territory.RowId;
-                var itemId = CosmicHelper.PlanetCreditInfo[territory];
-                PlayerHelper.GetItemCount(itemId, out var credits);
-
-                ImGui.Text(T("Current location: {0} | Currency Amount: {1}", territory, credits));
+                if (CosmicMoonRegistry.TryGetPlanetCreditItemId(territory, out var itemId))
+                {
+                    PlayerHelper.GetItemCount(itemId, out var credits);
+                    ImGui.Text($"Current location: {territory} | Currency Amount: {credits}");
+                }
             }
 
             ImGui.Separator();
             ImGui.TextUnformatted(T("Configure the weights for each item in the Gamba. Higher weight = more desirable."));
 
-if (ImGui.Button(T("Reset Weights")))
+            if (ImGui.Button(T("Reset Weights")))
             {
                 Task_Gamba.EnsureGambaWeightsInitialized(true);
             }
@@ -151,14 +151,14 @@ if (ImGui.Button(T("Reset Weights")))
                     var itemsType = C.GambaItemWeights.Where(x => x.Type == type).OrderBy(x => x.ItemId).ToList();
                     if (itemsType.Count == 0) continue;
 
-                    if (ImGui.BeginTabItem($"{T(type.ToString())} [{itemsType.Count}]"))
+                    if (ImGui.BeginTabItem($"{type.ToString()} [{itemsType.Count}]"))
                     {
                         if (ImGui.BeginTable($"{type.ToString()}_GambaItems", 4, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Borders | ImGuiTableFlags.RowBg))
                         {
-ImGui.TableSetupColumn(T("Icon"));
-ImGui.TableSetupColumn(T("Unlocked"));
-ImGui.TableSetupColumn(T("Name"));
-ImGui.TableSetupColumn(T("Weight"));
+                            ImGui.TableSetupColumn(T("Icon"));
+                            ImGui.TableSetupColumn(T("Unlocked"));
+                            ImGui.TableSetupColumn(T("Name"));
+                            ImGui.TableSetupColumn(T("Weight"));
 
                             ImGui.TableHeadersRow();
 
@@ -187,7 +187,7 @@ ImGui.TableSetupColumn(T("Weight"));
                                     }
 
                                     ImGui.TableNextColumn();
-                                    ImGui.TextUnformatted(UnlockState.IsItemUnlockable(itemInfo) ? (UnlockState.IsItemUnlocked(itemInfo) ? T("Yes") : T("No")) : "-");
+                                    ImGui.TextUnformatted(UnlockState.IsItemUnlockable(itemInfo) ? UnlockState.IsItemUnlocked(itemInfo) ? T("Yes") : T("No") : "-");
                                     
                                     ImGui.TableNextColumn();
                                     ImGui.Text($"{name}");
@@ -225,7 +225,7 @@ ImGui.TableSetupColumn(T("Weight"));
             }
 
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Start Gambling @"), ref currentIndex, 0, allowedValues.Length - 1,
+            if (ImGui.SliderInt(T("Start Gambling @"), ref currentIndex, 0, allowedValues.Length - 1,
                 allowedValues[currentIndex].ToString()))
             {
                 C.GambaAtAmount = allowedValues[currentIndex];

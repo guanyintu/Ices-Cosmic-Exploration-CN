@@ -1,10 +1,10 @@
-﻿using ECommons.GameHelpers;
+using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game.WKS;
 using System.Collections.Generic;
 using System.Text;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using ICE.Utilities;
 using ICE.Utilities.Cosmic_Helper;
-using static ICE.Localization.L10n;
 
 namespace ICE.Ui.DebugWindowTabs
 {
@@ -201,10 +201,10 @@ namespace ICE.Ui.DebugWindowTabs
 
         public static unsafe void Draw()
         {
-            ImGui.Text(T("Current Mission: {0}", CosmicHelper.CurrentLunarMission));
-            ImGui.Text(T("Artisan Endurance: {0}", P.Artisan.GetEnduranceStatus()));
+            ImGui.Text($"Current Mission: {CosmicHelper.CurrentLunarMission}");
+            ImGui.Text($"Artisan Endurance: {P.Artisan.GetEnduranceStatus()}");
 
-            if (ImGui.Button(T("Set Location: {0}##SetPositionForDraw", WorldPos)))
+            if (ImGui.Button($"Set Location: {WorldPos}##SetPositionForDraw"))
             {
                 var pos = Player.Position;
                 WorldPos = pos;
@@ -242,7 +242,7 @@ namespace ICE.Ui.DebugWindowTabs
             //  1          - Unknown 10
             //  1          - Unknown 11
 
-            ImGui.Text(T("{0}", WKSManager.Instance()->CurrentMissionUnitRowId));
+            ImGui.Text($"{WKSManager.Instance()->State.CurrentMission.MissionUnitRowId}");
 
             if (ImGui.Button(T("Test Drone Buy")))
             {
@@ -273,11 +273,11 @@ namespace ICE.Ui.DebugWindowTabs
                     {
                         if (ffObjects.BaseId == 2014616 || ffObjects.BaseId == 2014618)
                         {
-                            ImGui.Text(T("--> Name: {0} | ID: {1}", ffObjects.Name, ffObjects.BaseId));
+                            ImGui.Text($"--> Name: {ffObjects.Name} | ID: {ffObjects.BaseId}");
                         }
                         else
                         {
-                            ImGui.Text(T("Name: {0} | ID: {1}", ffObjects.Name, ffObjects.BaseId));
+                            ImGui.Text($"Name: {ffObjects.Name} | ID: {ffObjects.BaseId}");
                         }
                     }
                 }
@@ -287,30 +287,30 @@ namespace ICE.Ui.DebugWindowTabs
             var gameObject = Utils.TryGetObjectNearestEventObject();
             float gameObjectDistance = 0;
             if (gameObject is not null)
-                gameObjectDistance = PlayerHelper.GetDistanceToPlayer(gameObject);
+                gameObjectDistance = Player.DistanceTo(gameObject);
             if (ImGui.Button(T("Click Nearest EventObject")))
             {
                 Utils.TargetgameObjectTask(gameObject);
                 Utils.InteractWithObject(gameObject);
             }
             ImGui.SameLine();
-            ImGui.Text(T("Distance to nearest: {0}", gameObjectDistance));
+            ImGui.Text($"Distance to nearest: {gameObjectDistance}");
 
             var collectionPoint = Utils.TryGetObjectCollectionPoint();
             float collectionPointDistance = 0;
             if (collectionPoint is not null)
-                collectionPointDistance = PlayerHelper.GetDistanceToPlayer(collectionPoint);
+                collectionPointDistance = Player.DistanceTo(collectionPoint);
             if (ImGui.Button(T("Click Nearest Collection Point")))
             {
                 Utils.TargetgameObjectTask(collectionPoint);
                 Utils.InteractWithObject(collectionPoint);
             }
             ImGui.SameLine();
-            ImGui.Text(T("Distance to nearest: {0}", collectionPointDistance));
+            ImGui.Text($"Distance to nearest: {collectionPointDistance}");
 
             if (ImGui.Button(T("Print GatheringPoint Info")))
             {
-                var gatheringPoint = PlayerHelper.LocalPlayer.TargetObject;
+                var gatheringPoint = Player.Object?.TargetObject;
                 if (gatheringPoint is not null)
                 {
                     var nodeId = gatheringPoint.BaseId;
@@ -320,14 +320,18 @@ namespace ICE.Ui.DebugWindowTabs
                     var currentMission = CosmicHelper.CurrentMissionInfo;
                     var nodeSet = currentMission?.MapPosition ?? new Vector2(0, 0);
 
-                    string info = $"new GathNodeInfo\n{{\n    ZoneId = 1237,\n    NodeId = {nodeId},\n    Position = new Vector3({position.X}f, {position.Y}f, {position.Z}f),\n    LandZone = new Vector3({landZone.X}f, {landZone.Y}f, {landZone.Z}f),\n    GatheringType = {gatheringType},\n    NodeSet = {nodeSet}\n}}";
+                    // In cosmic zone use where you are; otherwise Sinus so clipboard export still works.
+                    var zoneId = PlayerHelper.IsInCosmicZone()
+                        ? Player.Territory.RowId
+                        : CosmicMoonRegistry.Sinus.TerritoryId;
+                    string info = $"new GathNodeInfo\n{{\n    ZoneId = {zoneId},\n    NodeId = {nodeId},\n    Position = new Vector3({position.X}f, {position.Y}f, {position.Z}f),\n    LandZone = new Vector3({landZone.X}f, {landZone.Y}f, {landZone.Z}f),\n    GatheringType = {gatheringType},\n    NodeSet = {nodeSet}\n}}";
 
                     ImGui.SetClipboardText(info);
                     Svc.Chat.Print(info);
                 }
                 else
                 {
-                    Svc.Chat.Print(T("No GatheringPoint targeted."));
+                    Svc.Chat.Print("No GatheringPoint targeted.");
                 }
             }
 
@@ -357,7 +361,7 @@ namespace ICE.Ui.DebugWindowTabs
                     string unicodeString = $"\\u{i:X3}"; // Formats as \uE000, \uE001, etc.
 
                     // If using ImGui (common in Dalamud plugins):
-                    ImGui.Text(T("{0}: {1}", unicodeString, icon));
+                    ImGui.Text($"{unicodeString}: {icon}");
                     if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
                     {
                         ImGui.SetClipboardText($"{unicodeString}");
@@ -378,10 +382,10 @@ namespace ICE.Ui.DebugWindowTabs
             {
                 foreach (var fontIcon in Icons)
                 {
-                    ImGui.Text(T("{0} -> {1}", fontIcon.Key, fontIcon.Value));
+                    ImGui.Text($"{fontIcon.Key} -> {fontIcon.Value}");
                 }
             }
-            ImGui.Text(T("Mission Timer: {0}", AddonHelper.GetNodeText("WKSMissionInfomation", 24)));
+            ImGui.Text($"Mission Timer: {AddonHelper.GetNodeText("WKSMissionInfomation", 24)}");
             if (ImGui.Button(T("Move Item")))
             {
                 MoveItem();
@@ -404,7 +408,7 @@ namespace ICE.Ui.DebugWindowTabs
             }
 
             ImGui.SameLine();
-            ImGui.Text(T("Selected: {0} icons", selectedIcons.Count(kvp => kvp.Value)));
+            ImGui.Text($"Selected: {selectedIcons.Count(kvp => kvp.Value)} icons");
 
             ImGui.Separator();
 
@@ -496,7 +500,7 @@ namespace ICE.Ui.DebugWindowTabs
             if (ImGui.Button(T("Copy to Clipboard")))
             {
                 ImGui.SetClipboardText(exportedCode);
-                Svc.Chat.Print(T("Dictionary code copied to clipboard!"));
+                Svc.Chat.Print("Dictionary code copied to clipboard!");
             }
 
             ImGui.Separator();
