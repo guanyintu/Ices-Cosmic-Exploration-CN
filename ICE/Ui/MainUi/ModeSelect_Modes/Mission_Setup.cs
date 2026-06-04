@@ -230,23 +230,23 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 {
                     // TODO: Mission Settings
                     bool grindAllProvisionals = C.GrindAllProvisionals;
-                    if (ImGui.Checkbox("Provisional: Allow All Classes", ref grindAllProvisionals))
+                    if (ImGui.Checkbox(T("Provisional: Allow All Classes"), ref grindAllProvisionals))
                     {
                         C.GrindAllProvisionals = grindAllProvisionals;
                         C.Save();
                     }
-                    ImGuiEx.HelpMarker("Enabling this will show you all weather/timed/sequence missions that you can grind,\n" +
-                                       "ON TOP OF doing the normal missions for whichever class you start on.\n" +
-                                       "If you just want to focus one specific class, set this to false");
+                    ImGuiEx.HelpMarker(T("Enabling this will show you all weather/timed/sequence missions that you can grind,\n" +
+                                         "ON TOP OF doing the normal missions for whichever class you start on.\n" +
+                                         "If you just want to focus one specific class, set this to false"));
 
                     bool allowCriticalsAllClass = C.GrindOffClassRedAlert;
-                    if (ImGui.Checkbox("Critical: Allow All Classes", ref allowCriticalsAllClass))
+                    if (ImGui.Checkbox(T("Critical: Allow All Classes"), ref allowCriticalsAllClass))
                     {
                         C.GrindOffClassRedAlert = allowCriticalsAllClass;
                         C.Save();
                     }
-                    ImGuiEx.HelpMarker($"This will allow you to grind other classes for criticals/red alerts. " +
-                        $"(So if you're on crp, but a bsm red alert pops up)");
+                    ImGuiEx.HelpMarker(T("This will allow you to grind other classes for criticals/red alerts. " +
+                                         "(So if you're on crp, but a bsm red alert pops up)"));
 
                     bool removeGold = C.RemoveAfterGold;
                     if (ImGui.Checkbox(T("Remove Mission Upon Gold Completion"), ref removeGold))
