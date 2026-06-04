@@ -388,8 +388,8 @@ namespace ICE.Ui
 
                     if (config.TurninRecords.Count > 0)
                     {
-                        ImGui.Text($"Best Time: {TimeSpan.FromSeconds(config.BestTime):mm\\:ss\\.ff}");
-                        ImGui.Text($"Average Time: {TimeSpan.FromSeconds(config.AverageTime):mm\\:ss\\.ff}");
+                        ImGui.Text(T("Best Time: {0}", TimeSpan.FromSeconds(config.BestTime).ToString(@"mm\:ss\.ff")));
+                        ImGui.Text(T("Average Time: {0}", TimeSpan.FromSeconds(config.AverageTime).ToString(@"mm\:ss\.ff")));
                     }
                     else
                     {
@@ -397,8 +397,8 @@ namespace ICE.Ui
                         ImGui.Text(T("Average Time: --:--:--"));
                     }
 
-                    ImGui.Text($"Times Completed: {config.TotalCompletions}");
-                    ImGui.Text($"Times Attempted: {config.TotalAttempts}");
+                    ImGui.Text(T("Times Completed: {0}", config.TotalCompletions));
+                    ImGui.Text(T("Times Attempted: {0}", config.TotalAttempts));
 
                     if (CosmicHelper.SheetMissionDict.TryGetValue(SelectedMission, out var missionInfo))
                     {
