@@ -395,9 +395,10 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             ImGui.SetCursorPosX(cursorPosX + (availWidth - totalWidth) * 0.5f);
 
                             var turninGoal = missionConfig.TurninGoal;
-                            var goldEnabled = turninGoal >= TurninState.Gold;
-                            var silverEnabled = turninGoal >= TurninState.Silver;
-                            var bronzeEnabled = turninGoal >= TurninState.Bronze;
+                            var timeExpired = turninGoal == TurninState.TimeExpired;
+                            var goldEnabled = !timeExpired && turninGoal >= TurninState.Gold;
+                            var silverEnabled = !timeExpired && turninGoal >= TurninState.Silver;
+                            var bronzeEnabled = !timeExpired && turninGoal >= TurninState.Bronze;
 
                             void DrawTurninButton(string id, TurninState state, bool enabled, Vector4 color, string tooltipLabel)
                             {
@@ -429,6 +430,16 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             DrawTurninButton("##Silver", TurninState.Silver, silverEnabled, SilverColor, T("Silver"));
                             ImGui.SameLine();
                             DrawTurninButton("##Bronze", TurninState.Bronze, bronzeEnabled, BronzeColor, T("Bronze"));
+                            ImGui.SameLine();
+                            ImGui.PushStyleColor(ImGuiCol.Text, timeExpired ? GoldColor : DisabledColor);
+                            if (ImGuiEx.IconButton(FontAwesomeIcon.Clock, "##TimeExpired", buttonSize))
+                            {
+                                missionConfig.TurninGoal = TurninState.TimeExpired;
+                                C.SaveDebounced();
+                            }
+                            ImGui.PopStyleColor();
+                            if (ImGui.IsItemHovered())
+                                ImGui.SetTooltip(T("Only turn in when the mission timer expires (keep gathering for max score)."));
                         }
 
                         ImGui.TableNextColumn();
