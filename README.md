@@ -1,6 +1,8 @@
-# Ices Cosmic Exploration (ICE)
+# Ices Cosmic Exploration CN (ICE)
 
-仓库地址：`https://raw.githubusercontent.com/QiongHHHZZZ/DalamudPlugins/main/pluginmaster.json`
+源码仓库：`https://github.com/guanyintu/Ices-Cosmic-Exploration-CN`
+
+这是 ICE 的国服维护与中文适配分支。上游功能逻辑尽量保持原样，本分支主要负责国服环境适配、中文界面文本、发布维护和必要的构建修复。
 
 这是一个面向宇宙探索（月球）内容的自动化辅助插件，用来减少重复刷任务的时间成本。  
 主要目标是帮助你高效刷取宇宙探索任务：无论是全任务金奖、宇宙工具经验，还是各职业 50 万职业技巧点，都可以通过配置后自动执行。
@@ -27,3 +29,11 @@
 - vnavmesh | 仓库：`https://github.com/awgil/ffxiv_navmesh`
 
 插件内置帮助页会说明各模式与前置要求，也提供依赖插件的一键跳转安装入口。
+
+## 维护说明
+
+- 上游项目：`https://github.com/LeontopodiumNivale14/Ices-Cosmic-Exploration`
+- 国服维护：`guanyintu`
+- Codex 参与：协助上游合并、冲突处理、中文文本整理、构建验证与发布流程配置。
+
+本分支不声明原创上游逻辑；功能实现以原作者和上游贡献者为基础，中文维护与国服适配由本分支继续整理。

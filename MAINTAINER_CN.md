@@ -1,4 +1,4 @@
-# ICE 国服维护说明（CN-MAINTAINER v1）
+# ICE 国服维护说明（CN-MAINTAINER v2）
 
 ## 文档目的
 
@@ -8,9 +8,10 @@
 ## 维护原则
 
 - 分发以你的仓库为准：
-  - 源码：`QiongHHHZZZ/Ices-Cosmic-Exploration`
-  - 仓库清单：`QiongHHHZZZ/DalamudPlugins`
+  - 源码：`guanyintu/Ices-Cosmic-Exploration-CN`
+  - 仓库清单：后续单独维护 Dalamud 插件仓库清单
 - 版本号必须可比较、可追溯、可复现。
+- Codex 可以参与上游同步、冲突处理、中文文本补全、构建验证和发布流程配置；涉及功能逻辑时优先保留上游实现。
 
 ## 上游同步规则（避免历史再次混乱）
 
@@ -22,7 +23,7 @@
 
 1. `git fetch upstream --prune`
 2. `git checkout Main-Branch`
-3. `git merge upstream/main`
+3. `git merge upstream/Main-Branch`
 4. 处理冲突并编译验证
 5. 再进行本地化/CN 适配修复并提交
 
@@ -54,7 +55,8 @@
 1. **确定版本号**
    - 按本文件“版本规则”生成新版本。
 2. **更新版本真源**
-   - 修改 `ICE/ICE.csproj` 中 `Version/AssemblyVersion/FileVersion`。
+   - 修改 `ICE/ICE.csproj` 中 `Version`。
+   - 修改 `ICE/ICE.json` 中 `RepoUrl` 指向 `guanyintu/Ices-Cosmic-Exploration-CN`。
 3. **本地构建**
    - `dotnet build ICE/ICE.csproj -c Release -v minimal`
 4. **发布源码仓库 Release**
@@ -75,7 +77,8 @@
 ## 发布检查清单
 
 - [ ] 版本号符合 4 段规则且单调递增
-- [ ] `Version == AssemblyVersion == FileVersion`
+- [ ] `ICE/ICE.csproj` 中 `Version` 已更新
+- [ ] `ICE/ICE.json` 中 `RepoUrl` 指向国服维护仓库
 - [ ] `dotnet build ICE/ICE.csproj -c Release -v minimal` 通过
 - [ ] Release 资产可下载
 - [ ] `pluginmaster` 中版本与下载链接已更新
