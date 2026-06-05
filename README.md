@@ -2,6 +2,10 @@
 
 源码仓库：`https://github.com/guanyintu/Ices-Cosmic-Exploration-CN`
 
+Dalamud 自定义插件仓库地址：
+
+`https://raw.githubusercontent.com/guanyintu/Ices-Cosmic-Exploration-CN/Main-Branch/pluginmaster.json`
+
 这是 ICE 的国服维护与中文适配分支。上游功能逻辑尽量保持原样，本分支主要负责国服环境适配、中文界面文本、发布维护和必要的构建修复。
 
 这是一个面向宇宙探索（月球）内容的自动化辅助插件，用来减少重复刷任务的时间成本。  

@@ -9,7 +9,7 @@
 
 - 分发以你的仓库为准：
   - 源码：`guanyintu/Ices-Cosmic-Exploration-CN`
-  - 仓库清单：后续单独维护 Dalamud 插件仓库清单
+  - 仓库清单：`https://raw.githubusercontent.com/guanyintu/Ices-Cosmic-Exploration-CN/Main-Branch/pluginmaster.json`
 - 版本号必须可比较、可追溯、可复现。
 - Codex 可以参与上游同步、冲突处理、中文文本补全、构建验证和发布流程配置；涉及功能逻辑时优先保留上游实现。
 
@@ -63,7 +63,7 @@
    - 创建 tag：`v<版本号>`
    - 上传发布资产（`ICE.zip`）
 5. **更新 DalamudPlugins**
-   - 修改 `pluginmaster.json` 中 `ICE` 条目：
+   - 修改根目录 `pluginmaster.json` 中 `ICE` 条目：
      - `AssemblyVersion`
      - `DownloadLinkInstall`
      - `DownloadLinkUpdate`
