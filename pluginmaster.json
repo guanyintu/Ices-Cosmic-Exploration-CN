@@ -3,14 +3,14 @@
     "Author": "Ice, guanyintu(国服维护&中文适配), Codex(协助维护)",
     "Name": "Ice's Cosmic Exploration (ICE) CN",
     "InternalName": "ICE",
-    "AssemblyVersion": "0.0.78.4002",
+    "AssemblyVersion": "0.0.78.7000",
     "Description": "国服维护版宇宙探索插件，支持采集、制作、钓鱼与任务自动化。",
     "Punchline": "欢迎来到月球。",
     "ApplicableVersion": "any",
     "RepoUrl": "https://github.com/guanyintu/Ices-Cosmic-Exploration-CN",
     "IconUrl": "https://raw.githubusercontent.com/QiongHHHZZZ/DalamudPlugins/main/icons/ice.png",
-    "DownloadLinkInstall": "https://github.com/guanyintu/Ices-Cosmic-Exploration-CN/releases/download/v0.0.78.4002/ICE.zip",
-    "DownloadLinkUpdate": "https://github.com/guanyintu/Ices-Cosmic-Exploration-CN/releases/download/v0.0.78.4002/ICE.zip",
+    "DownloadLinkInstall": "https://github.com/guanyintu/Ices-Cosmic-Exploration-CN/releases/download/v0.0.78.7000/ICE.zip",
+    "DownloadLinkUpdate": "https://github.com/guanyintu/Ices-Cosmic-Exploration-CN/releases/download/v0.0.78.7000/ICE.zip",
     "Tags": [
       "Gatherers"
     ]
