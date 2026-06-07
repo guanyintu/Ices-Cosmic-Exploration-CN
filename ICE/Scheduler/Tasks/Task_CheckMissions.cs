@@ -4,6 +4,7 @@ using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using ICE.Sounds;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using System.Collections.Generic;
 using System.Linq;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
@@ -894,11 +895,11 @@ namespace ICE.Scheduler.Tasks
             }
             else if (sheetInfo.IsGatherMission || sheetInfo.IsGreaterReach)
             {
-                var missionTerritory = sheetInfo.TerritoryId;
-                var mapId = sheetInfo.MapPosition;
-                var gatherInfo = GatheringRouteLoader.GetRoute(missionTerritory, mapId);
+                var route = sheetInfo.Gather_MapKey;
 
-                if (gatherInfo == null || gatherInfo.Count == 0)
+                var gatherInfo = GatheringRouteLoader.GetRoute(route);
+
+                if (gatherInfo == null || gatherInfo.Nodes.Count == 0)
                 {
                     IceLogging.Error("Hey, so this is actually missing the information for it. So going to just actually add it to the unsupported mission list", tag);
                     UnsupportedMissions.Ids.Add(missionId);
@@ -906,9 +907,9 @@ namespace ICE.Scheduler.Tasks
                 }
                 else
                 {
-                    var startNode = gatherInfo[0];
+                    var startNode = gatherInfo.Nodes[0];
 
-                    foreach (var node in gatherInfo)
+                    foreach (var node in gatherInfo.Nodes)
                     {
                         if (Player.DistanceTo(node.Position) < 5)
                         {
@@ -1053,8 +1054,9 @@ namespace ICE.Scheduler.Tasks
 
                     var job = CosmicHelper.SheetMissionDict[missionId].Jobs.First();
 
+                    // TODO: Need to just clean this up later, the function to directly grab it is no longer necessary
                     // Tool Mastery missions are only readable/grabbable from their own tab (3).
-                    byte categoryTab = CosmicHelper.SheetMissionDict[missionId].Master ? CosmicHandler.ToolMasteryTab : (byte)0;
+                    byte categoryTab = CosmicHelper.SheetMissionDict[missionId].IsMaster ? CosmicHandler.ToolMasteryTab : (byte)0;
 
                     if (CorrectJobTab(job, categoryTab))
                     {

@@ -4,12 +4,12 @@ using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ICE.Utilities.Cosmic_Helper;
-using ICE.Resources.GatheringRoutes;
 using ICE.Utilities.GatheringHelper;
 using System.Collections.Generic;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
 using static ICE.ConfigFiles.Config;
 using MissionRank = FFXIVClientStructs.FFXIV.Client.Game.WKS.WKSMissionModule.MissionRank;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -58,6 +58,7 @@ namespace ICE.Scheduler.Tasks
             var missionInfo = CosmicHelper.CurrentMissionInfo;
             bool collectableItem = missionInfo.Attributes.HasFlag(MissionAttributes.Collectables);
             bool reduceItems = missionInfo.Attributes.HasFlag(MissionAttributes.ReducedItems);
+            bool ScoreMode = missionInfo.IsMaster && C.MissionConfig[CosmicHelper.CurrentLunarMission].TurninGoal == TurninState.TimeExpired;
 
             bool CheckDelay()
             {
@@ -95,6 +96,11 @@ namespace ICE.Scheduler.Tasks
                     // This should prevent us from actually attempting to do another gathering action, while we are currently doing one
                     if (GenericHelpers.TryGetAddonMaster<Gathering>("Gathering", out var gather) && gather.IsAddonReady)
                     {
+                        if (EzThrottler.Throttle("Log message"))
+                        {
+                            IceLogging.Debug($"Collectable: {collectableItem} | Reduce: {reduceItems} | Score Mode: {ScoreMode}");
+                        }
+
                         if (reduceItems || collectableItem)
                         {
                             // We need to find an item where it's a collectable so we can just initiate the gathering window
@@ -123,9 +129,12 @@ namespace ICE.Scheduler.Tasks
                             if (CheckDelay())
                                 return false;
 
-                            if (UseGatherAction(configId, gatherChance, boonChance, gather.CurrentIntegrity, gather.TotalIntegrity, playerGp))
+                            if (!ScoreMode)
                             {
-                                return false;
+                                if (UseGatherAction(configId, gatherChance, boonChance, gather.CurrentIntegrity, gather.TotalIntegrity, playerGp))
+                                {
+                                    return false;
+                                }
                             }
 
                             // Find the item with the largest deficit
@@ -154,7 +163,14 @@ namespace ICE.Scheduler.Tasks
                             else
                             {
                                 // we must not need any of those items, so going to just do a first item gather
-                                gather.GatheredItems.Where(x => x.ItemID != 0).FirstOrDefault().Gather();
+                                if (!ScoreMode)
+                                    gather.GatheredItems
+                                        .Where(x => x.ItemID != 0)
+                                        .Where(x => !x.IsCollectable)
+                                        .FirstOrDefault()
+                                        .Gather();
+                                else
+                                    gather.GatheredItems.Where(x => x.ItemID != 0).FirstOrDefault().Gather();
                                 return false;
                             }
                         }
@@ -285,15 +301,15 @@ namespace ICE.Scheduler.Tasks
 
             var zoneId = Player.Territory;
             var missionEntry = CosmicHelper.CurrentMissionInfo;
-            var missionFlag = missionEntry.MapPosition;
-            var gatherInfo = GatheringRouteLoader.GetRoute(zoneId.RowId, missionFlag);
+            var gatherFile = GatheringRouteLoader.GetRoute(missionEntry.Gather_MapKey);
+            var gatherInfo = gatherFile?.Nodes;
 
             if (gatherInfo != null)
             {
-                if (Mission_Settings.previousMap != missionFlag)
+                if (Mission_Settings.previousRouteId != missionEntry.Gather_MapKey)
                 {
                     // We're currently at a whole new area. So going to check the gathering nodes to see which one we're closest to
-                    Mission_Settings.previousMap = missionFlag;
+                    Mission_Settings.previousRouteId = missionEntry.Gather_MapKey;
                     var closestNodeIndex = gatherInfo.Select((node, index) => new { Node = node, Index = index })
                                                      .Where(x => Svc.Objects.Any(obj => obj.ObjectKind == ObjectKind.GatheringPoint && obj.IsTargetable && obj.BaseId == x.Node.NodeId))
                                                      .OrderBy(x =>
@@ -366,7 +382,7 @@ namespace ICE.Scheduler.Tasks
 
             return false;
         }
-        private static void SetClosestTargetableNode(List<GathNodeInfo> gatherInfo)
+        private static void SetClosestTargetableNode(List<NodeInfo> gatherInfo)
         {
             var closestIndex = gatherInfo.Select((node, index) => new { Node = node, Index = index })
                                          .Where(x => Svc.Objects.Any(obj => obj.ObjectKind == ObjectKind.GatheringPoint && obj.IsTargetable && obj.BaseId == x.Node.NodeId))
@@ -403,8 +419,14 @@ namespace ICE.Scheduler.Tasks
         {
             var zoneId = Player.Territory;
             var missionEntry = CosmicHelper.CurrentMissionInfo;
-            var missionFlag = missionEntry.MapPosition;
-            var gatherInfo = GatheringRouteLoader.GetRoute(zoneId.RowId, missionFlag);
+            var gatherFile = GatheringRouteLoader.GetRoute(missionEntry.Gather_MapKey);
+            var gatherInfo = gatherFile?.Nodes;
+
+            if (gatherInfo == null || gatherInfo.Count == 0)
+            {
+                PluginLog.Warning($"No route found for mission {CosmicHelper.CurrentLunarMission}");
+                return true;
+            }
 
             var location = gatherInfo[Mission_Settings.nodeCounter];
 

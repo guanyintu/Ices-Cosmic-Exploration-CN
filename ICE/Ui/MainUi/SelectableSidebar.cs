@@ -112,7 +112,19 @@ namespace ICE.Ui.MainUi
                     ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.PersonBurst, T("Character Settings"), WindowSelection.CharacterSettings);
                     ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.UserCog, T("Misc Settings"), WindowSelection.MiscSettings);
                 }
+
                 var currentClass = C.SelectedJob;
+                var currentJob = (uint)Player.Job;
+                if (CosmicHelper.ClassInfoDict.TryGetValue((uint)Player.Job, out var jobClass))
+                {
+                    if (currentClass != currentJob)
+                    {
+                        C.SelectedJob = currentJob;
+                        C.SaveDebounced();
+                    }
+                }
+
+
                 var classIcon = ImGui_Ice.GetGreyscaleJob(currentClass);
                 if (ImGui_Ice.Sidebar_CollaspableHeader(T("Select Class"), SidebarTabs.ClassSelection, imageTexture: classIcon))
                 {

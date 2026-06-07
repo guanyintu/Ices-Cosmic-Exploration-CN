@@ -3,6 +3,7 @@ using Dalamud.Interface;
 using Dalamud.Interface.Utility.Raii;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using ICE.Utilities.ImGuiTools;
 using OtterGui;
 using OtterGui.Table;
@@ -263,26 +264,17 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
             {
                 if (UnsupportedMissions.Ids.Contains(mission.Id))
                 {
-                    ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle, "Hey, this mission is currently not supported.\n" +
-                        "I'm working on it currently, please give me time\n" +
-                        "Or in the case of fishing, give our big fisher strife time to make presets");
-                    ImGui.SameLine();
+                    ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle, "This mission is not currently supported\n" +
+                        "Had to rework the gathering dictionary and I'm tired of people not reading, so I had to push the update\n" +
+                        "Sooner rather than later. I should have it done Sunday though if not tonight\n" +
+                        "Sorry for the conconvience");
                 }
-
-                if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Gather))
+                if (mission.SheetInfo.TerritoryId == CosmicMoonRegistry.Auxesia.TerritoryId && mission.SheetInfo.Jobs.Contains(18))
                 {
-                    var gatherInfo = GatheringRouteLoader.GetRoute(mission.SheetInfo.TerritoryId, mission.SheetInfo.MapPosition);
-                    if (gatherInfo == null || gatherInfo.Count is 0)
-                        UnsupportedMissions.Ids.Add(mission.Id);
-                }
-                else if (mission.SheetInfo.Attributes.HasFlag(MissionAttributes.Fish))
-                {
-                    if (!GatheringUtil.MoonFishingLocations.TryGetValue(mission.SheetInfo.TerritoryId, out var zoneFishing)
-                        || !zoneFishing.TryGetValue(mission.SheetInfo.MapPosition, out var fishingHole)
-                        || fishingHole.Count == 0)
-                    {
-                        UnsupportedMissions.Ids.Add(mission.Id);
-                    }
+                    ImGuiEx.IconWithTooltip(FontAwesomeIcon.ExclamationTriangle,
+                        "Fishing isn't *-directly-* supportet yet. But all the fishing holes have locations now\n" +
+                        "So you should be able to import from the autohook wiki -> Set the first preset's name under \"Fishing Settings\"\n" +
+                        "And be able to farm to your hearts content. About as close as I can do rn till I finish up the rest of btn/min");
                 }
 
                 if (ImGui.Button(mission.SheetInfo.Name))
@@ -676,7 +668,8 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 if (info.IsSequence) return 9;
                 if (info.IsWeather) return 8;
                 if (info.IsTimed) return 7;
-                // Rank 6 = Provisional (handled above), 5 = Ex, 4 = A, 3 = B, 2 = C, 1 = D
+                if (info.IsMaster) return 6;
+                // 5 = Ex, 4 = A, 3 = B, 2 = C, 1 = D
                 return (int)info.Rank;
             }
 
@@ -742,7 +735,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                 if (FilterValue.HasFlag(MissionFilter.BRank) && sheetInfo.BRank && !special) return true;
                 if (FilterValue.HasFlag(MissionFilter.CRank) && sheetInfo.CRank && !special) return true;
                 if (FilterValue.HasFlag(MissionFilter.DRank) && sheetInfo.Drank && !special) return true;
-                if (FilterValue.HasFlag(MissionFilter.Master) && sheetInfo.Master) return true;
+                if (FilterValue.HasFlag(MissionFilter.Master) && sheetInfo.IsMaster) return true;
 
                 return false;
             }
@@ -906,7 +899,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes.CosmicTable
                         var silverEnabled = !timeExpired && highestTurnin >= TurninState.Silver;
                         var bronzeEnabled = !timeExpired && highestTurnin >= TurninState.Bronze;
 
-                        if (item.SheetInfo.Rank == 6 && !item.SheetInfo.IsProvisional)
+                        if (item.SheetInfo.IsMaster)
                         {
                             using (ImRaii.PushColor(ImGuiCol.Text, timeExpired ? GoldColor : DisabledColor))
                             {

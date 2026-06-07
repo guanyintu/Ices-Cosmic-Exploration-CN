@@ -286,17 +286,21 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
 
                     ImGui.Separator();
                     bool relic_AllowRedAlert = C.Relic_IncludeCriticals;
-                    if (ImGui.Checkbox(T("Allow Red Alerts for Relic"), ref relic_AllowRedAlert))
+                    if (ImGui.Checkbox(T("Relic Mode: Allow Red Alerts"), ref relic_AllowRedAlert))
                     {
                         C.Relic_IncludeCriticals = relic_AllowRedAlert;
                         C.Save();
                     }
 
                     bool OnlySelected = C.XPRelicOnlyEnabled;
-                    if (ImGui.Checkbox(T("Only selected missions"), ref OnlySelected))
+                    if (ImGui.Checkbox(T("Relic Mode: Only Enabled"), ref OnlySelected))
                     {
                         C.XPRelicOnlyEnabled = OnlySelected;
                         C.Save();
+                    }
+                    if (ImGui.Button(T("Open Job Swap Settings")))
+                    {
+                        C.SelectedTab = WindowSelection.CharacterSettings;
                     }
 
 
