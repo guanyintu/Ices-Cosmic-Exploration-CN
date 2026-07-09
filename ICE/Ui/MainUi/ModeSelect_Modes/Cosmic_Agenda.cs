@@ -45,7 +45,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
         {
             if (ImGui.BeginTabBar("Agenda Mode: Tabs"))
             {
-                if (ImGui.BeginTabItem("Current Agenda"))
+                if (ImGui.BeginTabItem(T("Current Agenda")))
                 {
                     float scale = ImGuiHelpers.GlobalScale;
 
@@ -187,7 +187,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     ImGui.SameLine();
                     using (ImRaii.Disabled(SelectedOption == PlaylistOptions.None))
                     {
-                        if (ImGui.Button("Add to Cosmic Agenda"))
+                        if (ImGui.Button(T("Add to Cosmic Agenda")))
                         {
                             var mode = ModeSelect.Standard;
                             if (SelectedOption is PlaylistOptions.SelectedRelicLv
@@ -216,18 +216,18 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     var validAgenda = C.Cosmic_Agenda.Count() > 0;
                     using (ImRaii.Disabled(!validAgenda))
                     {
-                        if (ImGui.Button("Save to Favorites"))
+                        if (ImGui.Button(T("Save to Favorites")))
                         {
                             ImGui.OpenPopup("Agenda Info: Profile Save");
                         }
                     }
                     if (ImGui.BeginPopup("Agenda Info: Profile Save"))
                     {
-                        ImGui.InputText("Name", ref profileName);
-                        ImGui.InputTextMultiline("Description", ref profileDescription);
+                        ImGui.InputText(T("Name"), ref profileName);
+                        ImGui.InputTextMultiline(T("Description"), ref profileDescription);
                         using (ImRaii.Disabled(profileName == string.Empty))
                         {
-                            if (ImGui.Button("Save"))
+                            if (ImGui.Button(T("Save")))
                             {
                                 AgendaProfileInfo newProfile = new()
                                 {
@@ -253,12 +253,12 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     ImGui.EndTabItem();
                 }
 
-                if (ImGui.BeginTabItem("Saved Agenda's"))
+                if (ImGui.BeginTabItem(T("Saved Agenda's")))
                 {
                     List<AgendaProfileInfo> listToRemove = new();
 
                     // Export button — copies to clipboard
-                    if (ImGui.Button("Export to Clipboard"))
+                    if (ImGui.Button(T("Export to Clipboard")))
                     {
                         ImGui.SetClipboardText(ExportProfile(SelectedAgenda));
                     }
@@ -269,7 +269,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     ImGui.SetNextItemWidth(300);
                     ImGui.InputText("##ImportBox", ref _importBuffer, 5028);
                     ImGui.SameLine();
-                    if (ImGui.Button("Import"))
+                    if (ImGui.Button(T("Import")))
                     {
                         if (TryImportProfile(_importBuffer, out var imported))
                         {
@@ -324,7 +324,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             bool held = ImGui.IsKeyDown(ImGuiKey.LeftShift) || ImGui.IsKeyDown(ImGuiKey.RightShift);
                             using (ImRaii.Disabled(!held))
                             {
-                                if (ImGui.Button("Apply to agenda"))
+                                if (ImGui.Button(T("Apply to agenda")))
                                 {
                                     C.Cosmic_Agenda = agenda.MissionList.Select(a => a.Clone()).ToList();
                                     C.Save();
@@ -332,14 +332,14 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             }
                             if (!held && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                             {
-                                ImGui.SetTooltip("Hold shift to allow applying");
+                                ImGui.SetTooltip(T("Hold shift to allow applying"));
                             }
 
                             ImGui.SameLine();
                             bool cntrlHeld = ImGui.IsKeyDown(ImGuiKey.LeftCtrl) || ImGui.IsKeyDown(ImGuiKey.RightCtrl);
                             using (ImRaii.Disabled(!cntrlHeld))
                             {
-                                if (ImGui.Button("Delete Profile"))
+                                if (ImGui.Button(T("Delete Profile")))
                                     listToRemove.Add(SelectedAgenda);
                             }
                             if (!cntrlHeld && ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
@@ -404,7 +404,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                     }
                     else
                     {
-                        ImGui.TextWrapped("You currently don't have any profiles saved! Please either make one and save, or import if you would like to populate this listing");
+                        ImGui.TextWrapped(T("You currently don't have any profiles saved! Please either make one and save, or import if you would like to populate this listing"));
                     }
 
                     ImGui.EndTabItem();

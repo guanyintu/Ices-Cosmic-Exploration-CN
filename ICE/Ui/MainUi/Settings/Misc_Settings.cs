@@ -35,32 +35,32 @@ namespace ICE.Ui.MainUi.Settings
 
         public static void OverlaySettings()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.WindowMaximize, "Overlay Window");
+            ImGuiEx.IconWithText(FontAwesomeIcon.WindowMaximize, T("Overlay Window"));
             ImGui.Dummy(new (0, 5));
 
             bool showOverlay = C.ShowOverlay;
-            if (ImGui.Checkbox("Show Overlay", ref showOverlay))
+            if (ImGui.Checkbox(T("Show Overlay"), ref showOverlay))
             {
                 C.ShowOverlay = showOverlay;
                 C.Save();
             }
             ImGui.SameLine();
             bool useCogsIcon = C.Overlay_UseCogsIcon;
-            if (ImGui.Checkbox("Use cogs button instead of home", ref useCogsIcon))
+            if (ImGui.Checkbox(T("Use cogs button instead of home"), ref useCogsIcon))
             {
                 C.Overlay_UseCogsIcon = useCogsIcon;
                 C.Save();
             }
 
             bool ShowSeconds = C.ShowSeconds;
-            if (ImGui.Checkbox("Show Seconds", ref ShowSeconds))
+            if (ImGui.Checkbox(T("Show Seconds"), ref ShowSeconds))
             {
                 C.ShowSeconds = ShowSeconds;
                 C.Save();
             }
 
             bool showExpOverlay = C.ShowExpBars;
-            if (ImGui.Checkbox("Show Experience Bars on Overlay", ref showExpOverlay))
+            if (ImGui.Checkbox(T("Show Experience Bars on Overlay"), ref showExpOverlay))
             {
                 C.ShowExpBars = showExpOverlay;
                 C.Save();
@@ -69,7 +69,7 @@ namespace ICE.Ui.MainUi.Settings
             {
                 ImGui.SameLine();
                 bool hideWhenMaxed = C.ShowExpBars_HideWhenMaxed;
-                if (ImGui.Checkbox("Until maxed only", ref hideWhenMaxed))
+                if (ImGui.Checkbox(T("Until maxed only"), ref hideWhenMaxed))
                 {
                     C.ShowExpBars_HideWhenMaxed = hideWhenMaxed;
                     C.Save();
@@ -77,21 +77,21 @@ namespace ICE.Ui.MainUi.Settings
             }
 
             bool showClassScore = C.ShowCurrentScore;
-            if (ImGui.Checkbox("Show Current Class Score", ref showClassScore))
+            if (ImGui.Checkbox(T("Show Current Class Score"), ref showClassScore))
             {
                 C.ShowCurrentScore = showClassScore;
                 C.Save();
             }
             ImGui.SameLine();
             bool showTotalScore = C.ShowTotalScore;
-            if (ImGui.Checkbox("Show Total Score", ref showTotalScore))
+            if (ImGui.Checkbox(T("Show Total Score"), ref showTotalScore))
             {
                 C.ShowTotalScore = showTotalScore;
                 C.Save();
             }
 
             bool AutoResize = C.Overlay_AutoResize;
-            if (ImGui.Checkbox("Auto Resize Overlay", ref AutoResize))
+            if (ImGui.Checkbox(T("Auto Resize Overlay"), ref AutoResize))
             {
                 C.Overlay_AutoResize = AutoResize;
                 C.Save();
@@ -99,21 +99,21 @@ namespace ICE.Ui.MainUi.Settings
 
 
             bool highlightTokenWeather = C.Overlay_HighlightTokenWeather;
-            if (ImGui.Checkbox("Highlight EX+ token weathers", ref highlightTokenWeather))
+            if (ImGui.Checkbox(T("Highlight EX+ token weathers"), ref highlightTokenWeather))
             {
                 C.Overlay_HighlightTokenWeather = highlightTokenWeather;
                 C.Save();
             }
 
             bool showSelectedWeatherMissions = C.Overlay_WeatherSelected;
-            if (ImGui.Checkbox($"Show enabled missions on weather hover", ref showSelectedWeatherMissions))
+            if (ImGui.Checkbox(T("Show enabled missions on weather hover"), ref showSelectedWeatherMissions))
             {
                 C.Overlay_WeatherSelected = showSelectedWeatherMissions;
                 C.Save();
             }
 
             bool filterByCurrentJob = C.Overlay_FilterByCurrentJob;
-            if (ImGui.Checkbox("Filter by current job only", ref filterByCurrentJob))
+            if (ImGui.Checkbox(T("Filter by current job only"), ref filterByCurrentJob))
             {
                 C.Overlay_FilterByCurrentJob = filterByCurrentJob;
                 C.Save();
@@ -151,53 +151,53 @@ namespace ICE.Ui.MainUi.Settings
             }
 
             bool disableHudClipping = C.DisableHudClipping;
-            if (ImGui.Checkbox("Disable HUD Clipping", ref disableHudClipping))
+            if (ImGui.Checkbox(T("Disable HUD Clipping"), ref disableHudClipping))
             {
                 C.DisableHudClipping = disableHudClipping;
                 C.Save();
             }
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip("When enabled, overlays will render over the native UI elements");
+                ImGui.SetTooltip(T("When enabled, overlays will render over the native UI elements"));
             }
 
         }
         private static void AutoUse()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.PersonRays, "Auto-Use");
+            ImGuiEx.IconWithText(FontAwesomeIcon.PersonRays, T("Auto-Use"));
             ImGui.Dummy(new Vector2(0, 5));
 
             bool DisableLunarAura = C.RemoveStellarStatus;
-            if (ImGui.Checkbox("Auto-Remove Stellar Status", ref DisableLunarAura))
+            if (ImGui.Checkbox(T("Auto-Remove Stellar Status"), ref DisableLunarAura))
             {
                 C.RemoveStellarStatus = DisableLunarAura;
                 C.Save();
             }
             ImGui.SameLine();
             ImGuiEx.IconWithTooltip(FontAwesomeIcon.InfoCircle,
-                                   "Automatically removes the Star Contributor visual effect (the glow you get for being a top contributor).\n" +
-                                   "The buff restores itself when you re-enter the zone.");
+                                   T("Automatically removes the Star Contributor visual effect (the glow you get for being a top contributor).\n" +
+                                   "The buff restores itself when you re-enter the zone."));
 
             bool autoStartOnMoonEnter = C.StartUponEnterMoon;
-            if (ImGui.Checkbox("Auto start upon entering a Cosmic Exploration area", ref autoStartOnMoonEnter))
+            if (ImGui.Checkbox(T("Auto start upon entering a Cosmic Exploration area"), ref autoStartOnMoonEnter))
             {
                 C.StartUponEnterMoon = autoStartOnMoonEnter;
                 C.Save();
             }
             ImGui.SameLine();
             ImGuiEx.IconWithTooltip(FontAwesomeIcon.QuestionCircle,
-                                   "This will check to see if you're on a gathering/crafting class upon first entering the moon.\n" +
+                                   T("This will check to see if you're on a gathering/crafting class upon first entering the moon.\n" +
                                    "If you are, it will automatically start as if you had pressed the start button yourself\n" +
                                    "Really useful if you have a tool to auto-log you in/if you just want to enter the moon and go\n" +
-                                   "This will ONLY run upon first entry.");
+                                   "This will ONLY run upon first entry."));
             ImGui.Dummy(Vector2.Zero);
         }
         private static void GoldMissionRemover()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.Medal, "Post Mission Settings");
+            ImGuiEx.IconWithText(FontAwesomeIcon.Medal, T("Post Mission Settings"));
 
             bool removeGold = C.RemoveAfterGold;
-            if (ImGui.Checkbox("Remove Mission Upon Gold Completion", ref removeGold))
+            if (ImGui.Checkbox(T("Remove Mission Upon Gold Completion"), ref removeGold))
             {
                 C.RemoveAfterGold = removeGold;
                 C.Save();
@@ -206,7 +206,7 @@ namespace ICE.Ui.MainUi.Settings
             using (ImRaii.Disabled(!removeGold))
             {
                 bool keepARanks = C.KeepARanks;
-                if (ImGui.Checkbox("Keep \"A Rank\" missions and below", ref keepARanks))
+                if (ImGui.Checkbox(T("Keep \"A Rank\" missions and below"), ref keepARanks))
                 {
                     C.KeepARanks = keepARanks;
                     C.Save();
@@ -215,12 +215,12 @@ namespace ICE.Ui.MainUi.Settings
         }
         private static void TimeRecords()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.Clock, "Record Settings");
+            ImGuiEx.IconWithText(FontAwesomeIcon.Clock, T("Record Settings"));
             ImGui.Dummy(new Vector2(0, 5));
 
             int TimeHistory = C.TimeHistoryLimit;
             ImGui.SetNextItemWidth(100);
-            if (ImGui.InputInt("Average Time History to keep", ref TimeHistory))
+            if (ImGui.InputInt(T("Average Time History to keep"), ref TimeHistory))
             {
                 C.TimeHistoryLimit = TimeHistory;
                 C.Save();
@@ -229,20 +229,20 @@ namespace ICE.Ui.MainUi.Settings
             ImGui.TextDisabled("?");
             if (ImGui.IsItemHovered())
             {
-                ImGui.SetTooltip("Anything below 0 to keep all logs\n" +
-                                 "Above 0 to keep a set limit");
+                ImGui.SetTooltip(T("Anything below 0 to keep all logs\n" +
+                                 "Above 0 to keep a set limit"));
             }
         }
         private static void PostMissionCommands()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.Play, "Post Mission Commands");
+            ImGuiEx.IconWithText(FontAwesomeIcon.Play, T("Post Mission Commands"));
             ImGui.Dummy(new Vector2(0, 5));
 
-            ImGui.TextWrapped("Input below a list of commands that you would like to run after a run has been completed. \n" +
+            ImGui.TextWrapped(T("Input below a list of commands that you would like to run after a run has been completed. \n" +
                               "This is kind of my way of letting you somewhat script/set up a sequence of other things that you would like to do that might not be included in the plugin itself. \n" +
-                              "If you want something more complex, just make an SND script at that point. And have this run that script post lol.");
+                              "If you want something more complex, just make an SND script at that point. And have this run that script post lol."));
 
-            if (ImGui.Button("Add New Command"))
+            if (ImGui.Button(T("Add New Command")))
             {
                 C.PostMissionCommands.Add(new MissionCommand
                 {
@@ -257,9 +257,9 @@ namespace ICE.Ui.MainUi.Settings
 
             if (ImGui.BeginTable("Mission Commands", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Borders))
             {
-                ImGui.TableSetupColumn("Command");
-                ImGui.TableSetupColumn("Delay");
-                ImGui.TableSetupColumn("Remove");
+                ImGui.TableSetupColumn(T("Command"));
+                ImGui.TableSetupColumn(T("Delay"));
+                ImGui.TableSetupColumn(T("Remove"));
 
                 ImGui.TableHeadersRow();
 
@@ -306,36 +306,36 @@ namespace ICE.Ui.MainUi.Settings
         }
         private static void FunSettings()
         {
-            ImGuiEx.IconWithText(FontAwesomeIcon.Heart, "Dev Favorites");
+            ImGuiEx.IconWithText(FontAwesomeIcon.Heart, T("Dev Favorites"));
             var crazyEnabled = C.CrazyTaxiArrow;
-            if (ImGui.Checkbox("Show Crazy Taxi Arrow when navmeshing", ref crazyEnabled))
+            if (ImGui.Checkbox(T("Show Crazy Taxi Arrow when navmeshing"), ref crazyEnabled))
             {
                 C.CrazyTaxiArrow = crazyEnabled;
                 C.Save();
             }
 
             var placiboEffect = C.PlaceboCheckbox;
-            if (ImGui.Checkbox("Increase Gathering & Crafting Speed", ref placiboEffect))
+            if (ImGui.Checkbox(T("Increase Gathering & Crafting Speed"), ref placiboEffect))
             {
                 C.PlaceboCheckbox = placiboEffect;
                 C.Save();
             }
             ImGui.SameLine();
-            ImGuiEx.IconWithTooltip(FontAwesomeIcon.QuestionCircle, "This does abosolutely nothing\n" +
+            ImGuiEx.IconWithTooltip(FontAwesomeIcon.QuestionCircle, T("This does abosolutely nothing\n" +
                 "But I know there's going to be people who enable this and don't read, so it's a tehe.\n" +
-                "Thanks for using my plugin though, it means a lot <3");
+                "Thanks for using my plugin though, it means a lot <3"));
 
             var fakeFishing = C.FakeIncreaseFisher;
             ImGui.Dummy(new(0, 0));
-            if (ImGui.Checkbox("Increase Fishing Speed", ref fakeFishing))
+            if (ImGui.Checkbox(T("Increase Fishing Speed"), ref fakeFishing))
             {
                 C.FakeIncreaseFisher = fakeFishing;
                 C.SaveDebounced();
             }
             ImGui.SameLine();
             ImGuiEx.IconWithTooltip(FontAwesomeIcon.QuestionCircle, 
-                "This is your warning, this will just apply a clown head to you every minute or so from glamourer.\n" +
-                "100% a joke setting, don't take it seriously. I don't have the technology for this");
+                T("This is your warning, this will just apply a clown head to you every minute or so from glamourer.\n" +
+                "100% a joke setting, don't take it seriously. I don't have the technology for this"));
         }
         private static void Separator()
         {

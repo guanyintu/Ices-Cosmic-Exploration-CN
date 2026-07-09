@@ -57,7 +57,7 @@ namespace ICE.Ui.MainUi
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("Filters which planets appear in the\nmission list and the overlay.");
+                        ImGui.Text(T("Filters which planets appear in the\nmission list and the overlay."));
                         ImGui.EndTooltip();
                     }
                     ImGui.Dummy(new(0, 3));

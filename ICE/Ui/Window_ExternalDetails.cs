@@ -108,7 +108,7 @@ namespace ICE.Ui
 
                 if (ImGui.BeginTabBar("Mission Details Master Tabs"))
                 {
-                    if (ImGui.BeginTabItem("Details"))
+                    if (ImGui.BeginTabItem(T("Details")))
                     {
                         MissionDetails(sheetInfo);
                         ImGui.EndTabItem();
@@ -116,7 +116,7 @@ namespace ICE.Ui
 
                     if (CosmicHelper.CrafterJobList.ContainsAny(sheetInfo.Jobs))
                     {
-                        if (ImGui.BeginTabItem("Craft Details"))
+                        if (ImGui.BeginTabItem(T("Craft Details")))
                         {
                             CraftDetails(sheetInfo);
                             ImGui.EndTabItem();
@@ -126,7 +126,7 @@ namespace ICE.Ui
                     var statsFlag = _openStatsTab ? ImGuiTabItemFlags.SetSelected : ImGuiTabItemFlags.None;
                     _openStatsTab = false;
 
-                    if (ImGui.BeginTabItem("Completion Stats", statsFlag))
+                    if (ImGui.BeginTabItem(T("Completion Stats"), statsFlag))
                     {
                         StatInfo(sheetInfo);
                         ImGui.EndTabItem();
@@ -297,7 +297,7 @@ namespace ICE.Ui
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Gathering Zone");
+                    ImGui.Text(T("Gathering Zone"));
 
                     ImGui.TableNextColumn();
 
@@ -314,7 +314,7 @@ namespace ICE.Ui
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Critical Area");
+                    ImGui.Text(T("Critical Area"));
 
                     ImGui.TableNextColumn();
                     ImGuiEx.Icon(FontAwesomeIcon.Flag);
@@ -328,7 +328,7 @@ namespace ICE.Ui
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Mission Skill");
+                    ImGui.Text(T("Mission Skill"));
 
                     ImGui.TableNextColumn();
                     ImGui_Ice.ImageButtonWithText(mission.TemporaryAction.Icon.GetWrapOrEmpty(), $"{mission.TemporaryAction.Name}", "tempAction", size);
@@ -342,7 +342,7 @@ namespace ICE.Ui
                 {
                     ImGui.TableNextRow();
                     ImGui.TableSetColumnIndex(0);
-                    ImGui.Text("Supplied Items");
+                    ImGui.Text(T("Supplied Items"));
 
                     ImGui.TableNextColumn();
                     for (int i = 0; i < mission.Supplies.Count(); i++)
@@ -367,7 +367,7 @@ namespace ICE.Ui
 
                 ImGui.TableNextRow();
                 ImGui.TableSetColumnIndex(0);
-                ImGui.Text($"Notes [Hover over]");
+                ImGui.Text(T("Notes [Hover over]"));
 
                 ImGui.TableNextColumn();
                 var HasSPM = mission.BestSPM.SPM > 0;
@@ -380,7 +380,7 @@ namespace ICE.Ui
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text($"Average SPM: {mission.BestSPM.SPM:N2}");
+                        ImGui.Text(T("Average SPM: {0:N2}", mission.BestSPM.SPM));
                         ImGui.Text($"{mission.BestSPM.NoteInfo}");
                         ImGui.EndTooltip();
                     }
@@ -396,7 +396,7 @@ namespace ICE.Ui
                         ImGui.BeginTooltip();
                         if (mission.SequenceMissions_Next.Count() > 0)
                         {
-                            ImGui.Text("Next Sequence:");
+                            ImGui.Text(T("Next Sequence:"));
                             foreach (var missionSeq in mission.SequenceMissions_Next)
                             {
                                 var seqInfo = CosmicHelper.SheetMissionDict[missionSeq];
@@ -405,7 +405,7 @@ namespace ICE.Ui
                         }
                         if (mission.SequenceMissions_Previous.Count() > 0)
                         {
-                            ImGui.Text("Previous Sequence:");
+                            ImGui.Text(T("Previous Sequence:"));
                             foreach (var missionSeq in mission.SequenceMissions_Previous)
                             {
                                 var seqInfo = CosmicHelper.SheetMissionDict[missionSeq];
@@ -432,7 +432,7 @@ namespace ICE.Ui
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text("The following missions are required to have gold before you can do this one");
+                        ImGui.Text(T("The following missions are required to have gold before you can do this one"));
                         foreach (var missionUnlock in mission.MissionUnlock)
                         {
                             ImGui_Ice.CompletionStatusIcon(CosmicHelper.SheetMissionDict[missionUnlock]);
@@ -450,8 +450,8 @@ namespace ICE.Ui
             {
                 if (ImGui.BeginTable("Exp Rewards", 2, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.Borders))
                 {
-                    ImGui.TableSetupColumn("Class Exp");
-                    ImGui.TableSetupColumn("% of Level");
+                    ImGui.TableSetupColumn(T("Class Exp"));
+                    ImGui.TableSetupColumn(T("% of Level"));
 
                     ImGui.TableHeadersRow();
 
@@ -459,7 +459,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Lv. 10-49");
+                        ImGui.Text(T("Lv. 10-49"));
 
                         ImGui.TableNextColumn();
                         ImGui.Text($"{mission.ExpModifier_1}%");
@@ -469,7 +469,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Lv. 50-89");
+                        ImGui.Text(T("Lv. 50-89"));
 
                         ImGui.TableNextColumn();
                         ImGui.Text($"{mission.ExpModifier_2}%");
@@ -479,7 +479,7 @@ namespace ICE.Ui
                     {
                         ImGui.TableNextRow();
                         ImGui.TableSetColumnIndex(0);
-                        ImGui.Text("Lv. 90-99");
+                        ImGui.Text(T("Lv. 90-99"));
 
                         ImGui.TableNextColumn();
                         ImGui.Text($"{mission.ExpModifier_3}%");
@@ -489,10 +489,10 @@ namespace ICE.Ui
                 }
             }
 
-            ImGui.Text("Mission Atributes");
+            ImGui.Text(T("Mission Atributes"));
             if (mission.Attributes == MissionAttributes.None)
             {
-                ImGui.Text("None");
+                ImGui.Text(T("None"));
                 return;
             }
             else
@@ -521,7 +521,7 @@ namespace ICE.Ui
 
                 using (ImRaii.Disabled(!allowDelete))
                 {
-                    if (ImGui.Button("Reset Stats"))
+                    if (ImGui.Button(T("Reset Stats")))
                     {
                         P.MissionTimer.ResetTimers(SelectedMission);
                     }
@@ -529,7 +529,7 @@ namespace ICE.Ui
                 if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenDisabled))
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("Hold Shift + Control");
+                    ImGui.Text(T("Hold Shift + Control"));
                     ImGui.EndTooltip();
                 }
 
@@ -540,29 +540,29 @@ namespace ICE.Ui
                 }
                 else
                 {
-                    ImGui.Text("Best Time: --:--:--");
-                    ImGui.Text("Average Time: --:--:--");
+                    ImGui.Text(T("Best Time: --:--:--"));
+                    ImGui.Text(T("Average Time: --:--:--"));
                 }
 
-                ImGui.Text($"Times Completed: {config.TotalCompletions}");
-                ImGui.Text($"Times Attempted: {config.TotalAttempts}");
+                ImGui.Text(T("Times Completed: {0}", config.TotalCompletions));
+                ImGui.Text(T("Times Attempted: {0}", config.TotalAttempts));
 
                 var baseScore = missionInfo.ClassScore;
                 var comsoCredit = missionInfo.CosmoCredit;
                 var planetCredit = missionInfo.LunarCredit;
 
                 ImGui.Separator();
-                ImGui.Text("Estimated Score Per Hour:");
+                ImGui.Text(T("Estimated Score Per Hour:"));
                 ImGui.SameLine();
                 ImGui.TextDisabled("?");
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("This is ASSUMING:");
-                    ImGui.Text("1: You have immaculate rng of getting the mission you want every time");
-                    ImGui.Text("2: You're hitting the threshold every time");
-                    ImGui.Text("This is based on your average time.\n" +
-                               "So get a good couple of runs to get a good feel for the timing");
+                    ImGui.Text(T("This is ASSUMING:"));
+                    ImGui.Text(T("1: You have immaculate rng of getting the mission you want every time"));
+                    ImGui.Text(T("2: You're hitting the threshold every time"));
+                    ImGui.Text(T("This is based on your average time.\n" +
+                               "So get a good couple of runs to get a good feel for the timing"));
                     ImGui.EndTooltip();
                 }
                 if (ImGui.BeginTable("Score Info: External Details", 5, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))

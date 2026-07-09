@@ -318,18 +318,18 @@ namespace ICE.Ui.MainUi.Settings
             }
 
             bool selfGather = C.Gather_NoNav;
-            if (ImGui.Checkbox("Disable Pathfinding Between Gathering Nodes", ref selfGather))
+            if (ImGui.Checkbox(T("Disable Pathfinding Between Gathering Nodes"), ref selfGather))
             {
                 C.Gather_NoNav = selfGather;
                 C.SaveDebounced();
             }
             ImGui.SameLine();
             ImGui_Ice.IconWithTooltip(FontAwesomeIcon.QuestionCircle,
-                "This will disable the pathfinding between the nodes WHILE in the mission\n" +
+                T("This will disable the pathfinding between the nodes WHILE in the mission\n" +
                 "But still allow the automation of skills/gathering actions/desynth between missions\n" +
                 "This is VERY testing beta, so there might be issues\n" +
                 "I swear on cuthulu's name if you enable this then ask \"Why it don't work\"" +
-                "You'll be banned by the shadow realm");
+                "You'll be banned by the shadow realm"));
 
             ImGui.Separator();
 
@@ -460,7 +460,7 @@ namespace ICE.Ui.MainUi.Settings
                     C.SaveDebounced();
                 }
 
-                ImGui.Text("Where'd the dual craft amount go?");
+                ImGui.Text(T("Where'd the dual craft amount go?"));
                 ImGui.SameLine();
                 ImGui.Dummy(new(5, 0));
                 ImGui.SameLine();
@@ -1065,13 +1065,13 @@ namespace ICE.Ui.MainUi.Settings
 
             using (ImRaii.Disabled(!ImGui.IsKeyDown(ImGuiKey.LeftShift)))
             {
-                if (ImGui.Button("Reset Fishing Presets"))
+                if (ImGui.Button(T("Reset Fishing Presets")))
                 {
                     ResetAllFisherProfiles();
                 }
             }
-            ImGuiEx.HelpMarker("Will reset all fishing presets to their default internal settings\n" +
-                "Hold Left Shift to allow applying");
+            ImGuiEx.HelpMarker(T("Will reset all fishing presets to their default internal settings\n" +
+                "Hold Left Shift to allow applying"));
         }
 
         private static MissionKinds GetMissionKind(MissionAttributes attrs)

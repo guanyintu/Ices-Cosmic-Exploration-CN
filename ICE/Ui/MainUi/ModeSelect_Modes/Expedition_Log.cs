@@ -85,7 +85,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 ImGui.Image(allClassTexture.Handle, new Vector2(20, 20));
 
                 ImGui.TableNextColumn();
-                if (ImGui.Selectable("All Classes", SelectedJob == 0, ImGuiSelectableFlags.SpanAllColumns))
+                if (ImGui.Selectable(T("All Classes"), SelectedJob == 0, ImGuiSelectableFlags.SpanAllColumns))
                 {
                     SelectedJob = 0;
                     ResetCompletionTable();

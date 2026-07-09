@@ -14,12 +14,12 @@ public static class Settings_TableColumns
     public static void ColumnSettings()
     {
         int missionSelectedOption = C.TableSortOption;
-        if (ImGui.BeginCombo("Sort By", missionSortOptions[missionSelectedOption]))
+        if (ImGui.BeginCombo(T("Sort By"), T(missionSortOptions[missionSelectedOption])))
         {
             for (int i = 0; i < missionSortOptions.Length; i++)
             {
                 bool isSelected = (i == missionSelectedOption);
-                if (ImGui.Selectable(missionSortOptions[i], isSelected))
+                if (ImGui.Selectable(T(missionSortOptions[i]), isSelected))
                 {
                     missionSelectedOption = i;
                 }
@@ -37,21 +37,21 @@ public static class Settings_TableColumns
         }
 
         bool hideUnsupported = C.HideUnsupportedMissions;
-        if (ImGui.Checkbox("Hide Unsupported Missions", ref hideUnsupported))
+        if (ImGui.Checkbox(T("Hide Unsupported Missions"), ref hideUnsupported))
         {
             C.HideUnsupportedMissions = hideUnsupported;
             C.Save();
         }
 
         bool autoShowToken = C.Auto_ShowTokens;
-        if (ImGui.Checkbox("Auto Hide/Show Planet Tokens", ref autoShowToken))
+        if (ImGui.Checkbox(T("Auto Hide/Show Planet Tokens"), ref autoShowToken))
         {
             C.Auto_ShowTokens = autoShowToken;
             C.Save();
         }
 
-        ImGuiEx.HelpMarker("Only enable this if you want plan on doing missions YOURSELF. AND NOT AUTOMATING IT. " +
-                           "Or if you're letting a different plugin do all the automating of turning in, craftings, gathering... and not letting I.C.E. handle interacting with those plugins");
+        ImGuiEx.HelpMarker(T("Only enable this if you want plan on doing missions YOURSELF. AND NOT AUTOMATING IT. " +
+                           "Or if you're letting a different plugin do all the automating of turning in, craftings, gathering... and not letting I.C.E. handle interacting with those plugins"));
     }
 
     private static bool ApplyToAllClasses = true;
@@ -93,20 +93,20 @@ public static class Settings_TableColumns
 
     public static void GeneralMissionSettings()
     {
-        if (ImGui.Button("Quick Apply Turnins"))
+        if (ImGui.Button(T("Quick Apply Turnins")))
         {
             ImGui.OpenPopup("Quick Apply_Mission Turnins");
         }
 
         if (ImGui.BeginPopup("Quick Apply_Mission Turnins"))
         {
-            if (ImGui.RadioButton("Apply to all classes", ApplyToAllClasses))
+            if (ImGui.RadioButton(T("Apply to all classes"), ApplyToAllClasses))
             {
                 ApplyToAllClasses = true;
                 ApplyToSpecicClass = false;
             }
 
-            if (ImGui.RadioButton("Apply to specific class", ApplyToSpecicClass))
+            if (ImGui.RadioButton(T("Apply to specific class"), ApplyToSpecicClass))
             {
                 ApplyToAllClasses = false;
                 ApplyToSpecicClass = true;
@@ -118,25 +118,25 @@ public static class Settings_TableColumns
                 IceLogging.Debug($"Selected class: {classOptions[selectedClassIndex]}, ID: {SpecificClass}");
             }
             ImGui.Separator();
-            ImGui.Text("Select Turnin Options");
+            ImGui.Text(T("Select Turnin Options"));
             ImGui.Dummy(new Vector2(0, 2));
 
-            if (ImGui.RadioButton("Gold", HighestTurnin is TurninState.Gold))
+            if (ImGui.RadioButton(T("Gold"), HighestTurnin is TurninState.Gold))
             {
                 HighestTurnin = TurninState.Gold;
             }
-            if (ImGui.RadioButton("Silver", HighestTurnin is TurninState.Silver))
+            if (ImGui.RadioButton(T("Silver"), HighestTurnin is TurninState.Silver))
             {
                 HighestTurnin = TurninState.Silver;
             }
-            if (ImGui.RadioButton("Bronze", HighestTurnin is TurninState.Bronze))
+            if (ImGui.RadioButton(T("Bronze"), HighestTurnin is TurninState.Bronze))
             {
                 HighestTurnin = TurninState.Bronze;
             }
 
             ImGui.Separator();
 
-            if (ImGui.Button("Apply"))
+            if (ImGui.Button(T("Apply")))
             {
                 var amountApplied = 0;
                 foreach (var mission in C.MissionConfig)
@@ -158,7 +158,7 @@ public static class Settings_TableColumns
                 }
                 C.SaveDebounced();
 
-                Notify.Success($"Applied settings to: {amountApplied} missions, just for you buddy.");
+                Notify.Success(T("Applied settings to: {0} missions, just for you buddy.", amountApplied));
                 ImGui.CloseCurrentPopup();
             }
 

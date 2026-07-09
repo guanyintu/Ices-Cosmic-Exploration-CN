@@ -662,7 +662,7 @@ namespace ICE.Ui
                 if (open)
                 {
                     bool stopWhen = C.StopAtRelicLv;
-                    if (ImGui.Checkbox("Stop At Relic Lv.", ref stopWhen))
+                    if (ImGui.Checkbox(T("Stop At Relic Lv."), ref stopWhen))
                     {
                         C.StopAtRelicLv = stopWhen;
                         C.Save();

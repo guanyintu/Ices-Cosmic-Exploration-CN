@@ -315,8 +315,8 @@ public static class CosmicTables
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("This mission is currently missing stuff to allow it to work. It might be planet locked, or could be just needs mapped out\n" +
-                        "I'll get to it when my world gets to it o/");
+                    ImGui.Text(T("This mission is currently missing stuff to allow it to work. It might be planet locked, or could be just needs mapped out\n" +
+                        "I'll get to it when my world gets to it o/"));
                     ImGui.EndTooltip();
                 }
             }
@@ -329,7 +329,7 @@ public static class CosmicTables
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("This mission doesn't have a fishing preset yet, this is your warning for this.");
+                    ImGui.Text(T("This mission doesn't have a fishing preset yet, this is your warning for this."));
                     ImGui.EndTooltip();
                 }
             }
@@ -761,7 +761,7 @@ public static class CosmicTables
                         if (ImGui.IsItemHovered())
                         {
                             ImGui.BeginTooltip();
-                            ImGui.Text("Time Slot");
+                            ImGui.Text(T("Time Slot"));
                             ImGui.Text($"{item.SheetInfo.StartTime:D2}:00 - {item.SheetInfo.EndTime:D2}:00");
                             ImGui.EndTooltip();
                         }
@@ -996,14 +996,14 @@ public static class CosmicTables
             if (item.SheetInfo.Attributes.HasFlag(MissionAttributes.Score_TimeRemaining) || item.SheetInfo.IsCritical)
             {
 
-                ImGuiUtil.Center("Auto");
+                    ImGuiUtil.Center(T("Auto"));
             }
             else if (item.SheetInfo.IsMaster)
             {
                 string masterPopup = "Master Settings: Popup";
 
                 ImGui.PushID($"Mission_{item.Id}");
-                if (ImGui.Button("Master Settings"))
+                if (ImGui.Button(T("Master Settings")))
                 {
                     ImGui.OpenPopup(masterPopup);
                 }
@@ -1020,31 +1020,31 @@ public static class CosmicTables
                         var itemTurnin = selectedMode == TurninState.Master_Items;
 
 
-                        if (ImGui.RadioButton("Timed Turnin##TurninGoalRadio", timeExpired))
+                        if (ImGui.RadioButton($"{T("Timed Turnin")}##TurninGoalRadio", timeExpired))
                         {
                             configInfo.TurninGoal = TurninState.TimeExpired;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin once the timer runs out\n" +
+                            ImGui.SetTooltip(T("Will turnin once the timer runs out\n" +
                                 "Currently there isn't a way to stop artisan from crafting, it's been requested\n" +
-                                "Please give it time");
+                                "Please give it time"));
                         }
 
                         ImGui.Separator();
-                        if (ImGui.RadioButton("Score Goal##ScoreGoalRadio", scoreMode))
+                        if (ImGui.RadioButton($"{T("Score Goal")}##ScoreGoalRadio", scoreMode))
                         {
                             configInfo.TurninGoal = TurninState.Master_Score;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin when 1 of the 2 things are met:\n" +
+                            ImGui.SetTooltip(T("Will turnin when 1 of the 2 things are met:\n" +
                                 "1: Score that you personally have set has been met\n" +
                                 "2: Timer has ran out\n" +
                                 "You can set your score with this mode yourself, due to not knowing the scoring break points\n" +
-                                "Yet");
+                                "Yet"));
                         }
                         ImGui.SameLine();
                         var masterScore = configInfo.Master_Score;
@@ -1058,16 +1058,16 @@ public static class CosmicTables
                         if (item.SheetInfo.Jobs.ContainsAny(CosmicHelper.CrafterJobList))
                         {
                             ImGui.Separator();
-                            if (ImGui.RadioButton("After X Crafts", itemTurnin))
+                            if (ImGui.RadioButton(T("After X Crafts"), itemTurnin))
                             {
                                 configInfo.TurninGoal = TurninState.Master_Items;
                                 C.SaveDebounced();
                             }
                             if (ImGui.IsItemHovered())
                             {
-                                ImGui.SetTooltip("Will turn in after X amount of crafts have been completed\n" +
+                                ImGui.SetTooltip(T("Will turn in after X amount of crafts have been completed\n" +
                                     "Good if you're goal is to just craft a certain amount and not worry bout score\n" +
-                                    "DO NOT. SET THIS TO SOME REDICULOUS AMOUNT AND ASK WHY IT DOESN'T WORK");
+                                    "DO NOT. SET THIS TO SOME REDICULOUS AMOUNT AND ASK WHY IT DOESN'T WORK"));
                             }
                             ImGui.SameLine();
                             var itemCount = configInfo.Master_Items;
@@ -1080,16 +1080,16 @@ public static class CosmicTables
                         }
 
                         ImGui.Separator();
-                        if (ImGui.RadioButton("Quick Turnin##QuickTurninRadio", quickTurnin))
+                        if (ImGui.RadioButton($"{T("Quick Turnin")}##QuickTurninRadio", quickTurnin))
                         {
                             configInfo.TurninGoal = TurninState.Gold;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin the mission as soon as it can\n" +
+                            ImGui.SetTooltip(T("Will turnin the mission as soon as it can\n" +
                                 "Very useful for quick score farming, mount tokens.\n" +
-                                "For BTN/MIN, this will gather the non-collectable item");
+                                "For BTN/MIN, this will gather the non-collectable item"));
                         }
                     }
 
@@ -1366,42 +1366,42 @@ public static class CosmicTables
                     var job = item.SheetInfo.Jobs.Where(x => CosmicHelper.GatheringJobList.Contains(x)).First();
                     var icon = CosmicHelper.ClassInfoDict[job].JobIcon;
 
-                    if (ImGui_Ice.ImageButtonWithText(icon.GetWrapOrEmpty(), "Fishing Profile", $"{item.Id}_{item.SheetInfo.Name}_FSH", jobIconSize))
+                    if (ImGui_Ice.ImageButtonWithText(icon.GetWrapOrEmpty(), T("Fishing Profile"), $"{item.Id}_{item.SheetInfo.Name}_FSH", jobIconSize))
                     {
                         ImGui.OpenPopup("Select Fishing Profile");
                     }
                     if (ImGui.BeginPopup("Select Fishing Profile"))
                     {
-                        ImGui.Text($"Fishing profile: {sheetInfo.Name}");
+                        ImGui.Text(T("Fishing profile: {0}", sheetInfo.Name));
                         ImGui.Separator();
                         bool builtInPreset = config.Use_BuildinPreset;
-                        if (ImGui.Checkbox("Use Built In Preset", ref builtInPreset))
+                        if (ImGui.Checkbox(T("Use Built In Preset"), ref builtInPreset))
                         {
                             config.Use_BuildinPreset = builtInPreset;
                             C.Save();
                         }
-                        ImGuiEx.HelpMarker("Having this enabled means it will use the default preset that is included with the plugin for autohook. \n" +
-                                           "If you would like to use one that you already have in autohook, you can un-checkmark this and type the name of it below");
+                        ImGuiEx.HelpMarker(T("Having this enabled means it will use the default preset that is included with the plugin for autohook. \n" +
+                                           "If you would like to use one that you already have in autohook, you can un-checkmark this and type the name of it below"));
                         using (ImRaii.Disabled(builtInPreset))
                         {
                             string presetName = config.AutoHookPresetName;
                             ImGui.SetNextItemWidth(200);
-                            if (ImGui.InputText("Preset Name", ref presetName))
+                            if (ImGui.InputText(T("Preset Name"), ref presetName))
                             {
                                 config.AutoHookPresetName = presetName;
                                 C.SaveDebounced();
                             }
-                            if (ImGui.Button("Try and apply above profile"))
+                            if (ImGui.Button(T("Try and apply above profile")))
                             {
                                 P.AutoHook.SetPreset(presetName);
                             }
                             if (ImGui.IsItemHovered())
                             {
-                                ImGui.SetTooltip("Allows testing to make sure that you have the preset name\n" +
-                                    "typed in correctly. This is *case* specific so");
+                                ImGui.SetTooltip(T("Allows testing to make sure that you have the preset name\n" +
+                                    "typed in correctly. This is *case* specific so"));
                             }
                             ImGui.SameLine();
-                            if (ImGui.Button("Clear Profile"))
+                            if (ImGui.Button(T("Clear Profile")))
                             {
                                 config.AutoHookPresetName = string.Empty;
                                 C.SaveDebounced();
@@ -1439,7 +1439,7 @@ public static class CosmicTables
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text($"Average SPM: {sheetInfo.BestSPM.SPM:N2}");
+                    ImGui.Text(T("Average SPM: {0:N2}", sheetInfo.BestSPM.SPM));
                     ImGui.Text($"{sheetInfo.BestSPM.NoteInfo}");
                     ImGui.EndTooltip();
                 }
@@ -1455,7 +1455,7 @@ public static class CosmicTables
                     ImGui.BeginTooltip();
                     if (sheetInfo.SequenceMissions_Next.Count() > 0)
                     {
-                        ImGui.Text("Next Sequence:");
+                        ImGui.Text(T("Next Sequence:"));
                         foreach (var mission in sheetInfo.SequenceMissions_Next)
                         {
                             var seqInfo = CosmicHelper.SheetMissionDict[mission];
@@ -1464,7 +1464,7 @@ public static class CosmicTables
                     }
                     if (sheetInfo.SequenceMissions_Previous.Count() > 0)
                     {
-                        ImGui.Text("Previous Sequence:");
+                        ImGui.Text(T("Previous Sequence:"));
                         foreach (var mission in sheetInfo.SequenceMissions_Previous)
                         {
                             var seqInfo = CosmicHelper.SheetMissionDict[mission];
@@ -1492,7 +1492,7 @@ public static class CosmicTables
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("The following missions are required to have gold before you can do this one");
+                    ImGui.Text(T("The following missions are required to have gold before you can do this one"));
                     foreach (var mission in sheetInfo.MissionUnlock)
                     {
                         ImGui_Ice.CompletionStatusIcon(CosmicHelper.SheetMissionDict[mission]);
@@ -1674,7 +1674,7 @@ public static class CosmicTables
                         if (ImGui.IsItemHovered())
                         {
                             ImGui.BeginTooltip();
-                            ImGui.Text("Time Slot");
+                            ImGui.Text(T("Time Slot"));
                             ImGui.Text($"{item.SheetInfo.StartTime:D2}:00 - {item.SheetInfo.EndTime:D2}:00");
                             ImGui.EndTooltip();
                         }
@@ -1824,14 +1824,14 @@ public static class CosmicTables
             if (item.SheetInfo.Attributes.HasFlag(MissionAttributes.Score_TimeRemaining) || item.SheetInfo.IsCritical)
             {
 
-                ImGuiUtil.Center("Auto");
+                ImGuiUtil.Center(T("Auto"));
             }
             else if (item.SheetInfo.IsMaster)
             {
                 string masterPopup = "Master Settings: Popup";
 
                 ImGui.PushID($"Mission_{item.Id}");
-                if (ImGui.Button("Master Settings"))
+                if (ImGui.Button(T("Master Settings")))
                 {
                     ImGui.OpenPopup(masterPopup);
                 }
@@ -1848,31 +1848,31 @@ public static class CosmicTables
                         var itemTurnin = selectedMode == TurninState.Master_Items;
 
 
-                        if (ImGui.RadioButton("Timed Turnin##TurninGoalRadio", timeExpired))
+                        if (ImGui.RadioButton($"{T("Timed Turnin")}##TurninGoalRadio", timeExpired))
                         {
                             configInfo.TurninGoal = TurninState.TimeExpired;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin once the timer runs out\n" +
+                            ImGui.SetTooltip(T("Will turnin once the timer runs out\n" +
                                 "Currently there isn't a way to stop artisan from crafting, it's been requested\n" +
-                                "Please give it time");
+                                "Please give it time"));
                         }
 
                         ImGui.Separator();
-                        if (ImGui.RadioButton("Score Goal##ScoreGoalRadio", scoreMode))
+                        if (ImGui.RadioButton($"{T("Score Goal")}##ScoreGoalRadio", scoreMode))
                         {
                             configInfo.TurninGoal = TurninState.Master_Score;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin when 1 of the 2 things are met:\n" +
+                            ImGui.SetTooltip(T("Will turnin when 1 of the 2 things are met:\n" +
                                 "1: Score that you personally have set has been met\n" +
                                 "2: Timer has ran out\n" +
                                 "You can set your score with this mode yourself, due to not knowing the scoring break points\n" +
-                                "Yet");
+                                "Yet"));
                         }
                         ImGui.SameLine();
                         var masterScore = configInfo.Master_Score;
@@ -1886,16 +1886,16 @@ public static class CosmicTables
                         if (item.SheetInfo.Jobs.ContainsAny(CosmicHelper.CrafterJobList))
                         {
                             ImGui.Separator();
-                            if (ImGui.RadioButton("After X Crafts", itemTurnin))
+                            if (ImGui.RadioButton(T("After X Crafts"), itemTurnin))
                             {
                                 configInfo.TurninGoal = TurninState.Master_Items;
                                 C.SaveDebounced();
                             }
                             if (ImGui.IsItemHovered())
                             {
-                                ImGui.SetTooltip("Will turn in after X amount of crafts have been completed\n" +
+                                ImGui.SetTooltip(T("Will turn in after X amount of crafts have been completed\n" +
                                     "Good if you're goal is to just craft a certain amount and not worry bout score\n" +
-                                    "DO NOT. SET THIS TO SOME REDICULOUS AMOUNT AND ASK WHY IT DOESN'T WORK");
+                                    "DO NOT. SET THIS TO SOME REDICULOUS AMOUNT AND ASK WHY IT DOESN'T WORK"));
                             }
                             ImGui.SameLine();
                             var itemCount = configInfo.Master_Items;
@@ -1908,16 +1908,16 @@ public static class CosmicTables
                         }
 
                         ImGui.Separator();
-                        if (ImGui.RadioButton("Quick Turnin##QuickTurninRadio", quickTurnin))
+                        if (ImGui.RadioButton($"{T("Quick Turnin")}##QuickTurninRadio", quickTurnin))
                         {
                             configInfo.TurninGoal = TurninState.Gold;
                             C.SaveDebounced();
                         }
                         if (ImGui.IsItemHovered())
                         {
-                            ImGui.SetTooltip("Will turnin the mission as soon as it can\n" +
+                            ImGui.SetTooltip(T("Will turnin the mission as soon as it can\n" +
                                 "Very useful for quick score farming, mount tokens.\n" +
-                                "For BTN/MIN, this will gather the non-collectable item");
+                                "For BTN/MIN, this will gather the non-collectable item"));
                         }
                     }
 
@@ -2089,36 +2089,36 @@ public static class CosmicTables
                     }
                     if (ImGui.BeginPopup("Select Fishing Profile"))
                     {
-                        ImGui.Text($"Fishing profile: {sheetInfo.Name}");
+                        ImGui.Text(T("Fishing profile: {0}", sheetInfo.Name));
                         ImGui.Separator();
                         bool builtInPreset = config.Use_BuildinPreset;
-                        if (ImGui.Checkbox("Use Built In Preset", ref builtInPreset))
+                        if (ImGui.Checkbox(T("Use Built In Preset"), ref builtInPreset))
                         {
                             config.Use_BuildinPreset = builtInPreset;
                             C.Save();
                         }
-                        ImGuiEx.HelpMarker("Having this enabled means it will use the default preset that is included with the plugin for autohook. \n" +
-                                           "If you would like to use one that you already have in autohook, you can un-checkmark this and type the name of it below");
+                        ImGuiEx.HelpMarker(T("Having this enabled means it will use the default preset that is included with the plugin for autohook. \n" +
+                                           "If you would like to use one that you already have in autohook, you can un-checkmark this and type the name of it below"));
                         using (ImRaii.Disabled(builtInPreset))
                         {
                             string presetName = config.AutoHookPresetName;
                             ImGui.SetNextItemWidth(200);
-                            if (ImGui.InputText("Preset Name", ref presetName))
+                            if (ImGui.InputText(T("Preset Name"), ref presetName))
                             {
                                 config.AutoHookPresetName = presetName;
                                 C.SaveDebounced();
                             }
-                            if (ImGui.Button("Try and apply above profile"))
+                            if (ImGui.Button(T("Try and apply above profile")))
                             {
                                 P.AutoHook.SetPreset(presetName);
                             }
                             if (ImGui.IsItemHovered())
                             {
-                                ImGui.SetTooltip("Allows testing to make sure that you have the preset name\n" +
-                                    "typed in correctly. This is *case* specific so");
+                                ImGui.SetTooltip(T("Allows testing to make sure that you have the preset name\n" +
+                                    "typed in correctly. This is *case* specific so"));
                             }
                             ImGui.SameLine();
-                            if (ImGui.Button("Clear Profile"))
+                            if (ImGui.Button(T("Clear Profile")))
                             {
                                 config.AutoHookPresetName = string.Empty;
                                 C.SaveDebounced();
@@ -2170,7 +2170,7 @@ public static class CosmicTables
                     ImGui.BeginTooltip();
                     if (sheetInfo.SequenceMissions_Next.Count() > 0)
                     {
-                        ImGui.Text("Next Sequence:");
+                        ImGui.Text(T("Next Sequence:"));
                         foreach (var mission in sheetInfo.SequenceMissions_Next)
                         {
                             var seqInfo = CosmicHelper.SheetMissionDict[mission];
@@ -2179,7 +2179,7 @@ public static class CosmicTables
                     }
                     if (sheetInfo.SequenceMissions_Previous.Count() > 0)
                     {
-                        ImGui.Text("Previous Sequence:");
+                        ImGui.Text(T("Previous Sequence:"));
                         foreach (var mission in sheetInfo.SequenceMissions_Previous)
                         {
                             var seqInfo = CosmicHelper.SheetMissionDict[mission];
@@ -2207,7 +2207,7 @@ public static class CosmicTables
                 if (ImGui.IsItemHovered())
                 {
                     ImGui.BeginTooltip();
-                    ImGui.Text("The following missions are required to have gold before you can do this one");
+                    ImGui.Text(T("The following missions are required to have gold before you can do this one"));
                     foreach (var mission in sheetInfo.MissionUnlock)
                     {
                         ImGui_Ice.CompletionStatusIcon(CosmicHelper.SheetMissionDict[mission]);

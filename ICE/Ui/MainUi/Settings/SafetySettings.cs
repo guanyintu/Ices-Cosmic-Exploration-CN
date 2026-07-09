@@ -77,19 +77,19 @@ if (ImGui.Checkbox(T("Add delay to crafting menu"), ref delayCraft))
             }
             int delayRelic = C.DelayPostRelic;
             ImGui.SetNextItemWidth(150);
-if (ImGui.SliderInt(T("Delay Post Relic Turnin"), ref delayRelic, 0, 5000))
+            if (ImGui.SliderInt(T("Delay Post Relic Turnin"), ref delayRelic, 0, 5000))
             {
                 C.DelayPostRelic = delayRelic;
                 C.SaveDebounced();
             }
             bool gatherDelay = C.Delay_Gather;
-            if (ImGui.Checkbox("Add delay to gather", ref gatherDelay))
+            if (ImGui.Checkbox(T("Add delay to gather"), ref gatherDelay))
             {
                 C.Delay_Gather = gatherDelay;
                 C.Save();
             }
             bool closeRewardPopup = C.HideRewardWindow;
-            if (ImGui.Checkbox("Auto Close Reward Popups", ref closeRewardPopup))
+            if (ImGui.Checkbox(T("Auto Close Reward Popups"), ref closeRewardPopup))
             {
                 C.HideRewardWindow = closeRewardPopup;
                 C.Save();

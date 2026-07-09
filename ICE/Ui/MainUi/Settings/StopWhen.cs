@@ -126,7 +126,7 @@ ImGui.Checkbox(T("Stop after current mission"), ref Mission_Settings.StopAfterCu
             #region Relic Level
 
             bool stopWhen = C.StopAtRelicLv;
-            if (ImGui.Checkbox("Stop At Relic Lv.", ref stopWhen))
+            if (ImGui.Checkbox(T("Stop At Relic Lv."), ref stopWhen))
             {
                 C.StopAtRelicLv = stopWhen;
                 C.Save();
@@ -145,7 +145,7 @@ ImGui.Checkbox(T("Stop after current mission"), ref Mission_Settings.StopAfterCu
             #region Mastery Score
 
             bool stopMastery = C.StopWhenMasteryComplete;
-            if (ImGui.Checkbox("Stop When Mastery Complete", ref stopMastery))
+            if (ImGui.Checkbox(T("Stop When Mastery Complete"), ref stopMastery))
             {
                 C.StopWhenMasteryComplete = stopMastery;
                 C.SaveDebounced();
@@ -165,14 +165,14 @@ ImGui.Checkbox(T("Stop after current mission"), ref Mission_Settings.StopAfterCu
             #region Standard Missions Golded
 
             bool standardGoldStop = C.StopOnceStandardMissionsGolded;
-            if (ImGui.Checkbox("Stop when all standard missions are golded", ref standardGoldStop))
+            if (ImGui.Checkbox(T("Stop when all standard missions are golded"), ref standardGoldStop))
             {
                 C.StopOnceStandardMissionsGolded = standardGoldStop;
                 C.Save();
             }
             ImGuiEx.HelpMarker(
-                "Stops when every non-provisional, non-critical mission for your selected job on the current moon is gold.\n" +
-                "Timed, weather, sequence, and red alert missions are not counted.");
+                T("Stops when every non-provisional, non-critical mission for your selected job on the current moon is gold.\n" +
+                "Timed, weather, sequence, and red alert missions are not counted."));
 
             #endregion
 

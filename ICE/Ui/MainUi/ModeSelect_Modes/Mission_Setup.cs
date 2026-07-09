@@ -321,17 +321,17 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                         C.SelectedTab = WindowSelection.CharacterSettings;
                     }
 
-                    if (ImGui.Button("Save Current Mission Preset"))
+                    if (ImGui.Button(T("Save Current Mission Preset")))
                     {
                         ImGui.OpenPopup("Preset Save Editor");
                     }
 
                     if (ImGui.BeginPopup("Preset Save Editor"))
                     {
-                        ImGui.InputText($"Playlist Name", ref newListName);
+                        ImGui.InputText(T("Playlist Name"), ref newListName);
                         using (ImRaii.Disabled(string.IsNullOrEmpty(newListName)))
                         {
-                            if (ImGui.Button("Save New List"))
+                            if (ImGui.Button(T("Save New List")))
                             {
                                 List<uint> new_Playlist = new();
                                 foreach (var mission in C.MissionConfig.Where(x => x.Value.Enabled))
@@ -356,26 +356,26 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
 
                     if (C.Mission_Playlist.Count > 0)
                     {
-                        if (ImGui.Button("View All Presets"))
+                        if (ImGui.Button(T("View All Presets")))
                         {
                             ImGui.OpenPopup("Preset: List Viewer");
                         }
 
                         if (ImGui.BeginPopup("Preset: List Viewer"))
                         {
-                            ImGui.Text($"Load Mission Preset");
+                            ImGui.Text(T("Load Mission Preset"));
 
                             if (ImGui.BeginTable($"Preset: TableViewer", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))
                             {
-                                ImGui.TableSetupColumn("Name");
-                                ImGui.TableSetupColumn("Amount Enabled");
+                                ImGui.TableSetupColumn(T("Name"));
+                                ImGui.TableSetupColumn(T("Amount Enabled"));
 
                                 ImGui.TableHeadersRow();
 
                                 ImGui.TableNextRow();
                                 ImGui.TableSetColumnIndex(0);
                                 ImGui.AlignTextToFramePadding();
-                                ImGui.Text($"Clear All");
+                                ImGui.Text(T("Clear All"));
                                 ImGui.SameLine();
                                 if (ImGuiEx.IconButton(FontAwesomeIcon.ArrowUpRightFromSquare, $"FreshPreset_Button"))
                                 {
