@@ -16,6 +16,11 @@ public partial class Config
     public bool StopOnceHitCosmicScore { get; set; } = false;
     public int CosmicScoreCap { get; set; } = 500_000;
     public bool StopOnceRelicFinished { get; set; } = false;
+    public bool StopOnceStandardMissionsGolded { get; set; } = false;
+    public bool StopWhenMasteryComplete { get; set; } = false;
+    public int MasteryCap { get; set; } = 500_000;
+    public bool StopAtRelicLv { get; set; } = false;
+    public int RelicLv { get; set; } = 20;
     public List<ProvisionalTypes> MissionPrio { get; set; } = new()
     {
         ProvisionalTypes.ProvisionalWeather,
@@ -28,6 +33,7 @@ public partial class Config
         MissionTypes.Critical,
         MissionTypes.Provisional,
         MissionTypes.Standard,
+        MissionTypes.ToolMastery,
     };
     public List<uint> JobPrio { get; set; } = new()
     {
@@ -55,25 +61,40 @@ public partial class Config
     public class MissionSettings
     {
         public bool Enabled { get; set; } = false;
-        public bool ManualMode { get; set; } = false;
         public int GProfileId { get; set; } = 0;
         public TurninState TurninGoal { get; set; } = TurninState.Gold;
+        public uint Master_Score { get; set; } = 1000;
+        public uint Master_Items { get; set; } = 6;
         public bool Use_BuildinPreset { get; set; } = false;
         public string AutoHookPresetName { get; set; } = string.Empty;
-        public double BestTime { get; set; } = double.MaxValue;
-        public double AverageTime { get; set; } = 0;
-        public double AverageBronzeTime { get; set; } = 0;
-        public double AverageSilverTime { get; set; } = 0;
-        public double AverageGoldTime { get; set; } = 0;
-        public double AverageCriticalTime { get; set; } = 0;
         public int TotalCompletions { get; set; } = 0;
         public int BronzeCompletion { get; set; } = 0;
         public int SilverCompletions { get; set; } = 0;
         public int GoldCompletions { get; set; } = 0;
         public int CriticalCompletions { get; set; } = 0;
+        public int Master_Completion { get; set; } = 0;
         public int FailedCounters { get; set; } = 0;
         public int TotalAttempts { get; set; } = 0;
         public List<TurninData> TurninRecords { get; set; } = new();
+        public double AverageGoalTime(TurninState state)
+        {
+            var records = TurninRecords.Where(x => x.State == state).ToList();
+            return records.Any() ? records.Average(t => t.Time) : 0;
+        }
+        public double AverageTime()
+        {
+            var records = TurninRecords.ToList();
+            return records.Any() ? records.Average(t => t.Time) : 0;
+        }
+        public double BestGoalTime(TurninState state)
+        {
+            var records = TurninRecords.Where(x => x.State == state).ToList();
+            return records.Any() ? records.Min(t => t.Time) : double.MaxValue;
+        }
+        public double BestTimeOverall()
+        {
+            return TurninRecords.Any() ? TurninRecords.Min(t => t.Time) : double.MaxValue;
+        }
         public Dictionary<uint, ArtisanSettings> CraftSettings { get; set; } = new();
 
         public class TurninData
@@ -97,15 +118,6 @@ public partial class Config
             public int MinStepsForMiracle { get; set; } = -1;
             public uint ExpertProfileId = 0;
         };
-
-        [Obsolete]
-        public bool AutoTurnin { get; set; } = true;
-        [Obsolete]
-        public bool TurninGold { get; set; } = false;
-        [Obsolete]
-        public bool TurninSilver { get; set; } = false;
-        [Obsolete]
-        public bool TurninBronze { get; set; } = false;
     }
     public class FishingLocations
     {

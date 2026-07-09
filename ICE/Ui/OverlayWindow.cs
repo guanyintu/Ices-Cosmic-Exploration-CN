@@ -19,6 +19,7 @@ namespace ICE.Ui
         public OverlayWindow() : base(T("ICE Overlay"))
         {
             Flags = ImGuiWindowFlags.None;
+            RespectCloseHotkey = false;
      
             P.windowSystem.AddWindow(this);
             TitleBarButtons.Add(
@@ -214,6 +215,15 @@ namespace ICE.Ui
                 if (missionText.Length > 35)
                     missionText = missionText[..32] + "...";
                 ImGui.Text(missionText);
+            }
+            else if (SchedulerMain.State == IceState.ArtifactSearch)
+            {
+                if (CosmicMoonRegistry.TryGetDronebit(Player.Territory.RowId, out var dronebit))
+                {
+                    PlayerHelper.GetItemCount(dronebit.boxId, out var count);
+
+                    ImGui.Text($"Dronebox Count: {count:N0}");
+                }
             }
             else
             {
@@ -651,6 +661,21 @@ namespace ICE.Ui
                 }
                 if (open)
                 {
+                    bool stopWhen = C.StopAtRelicLv;
+                    if (ImGui.Checkbox("Stop At Relic Lv.", ref stopWhen))
+                    {
+                        C.StopAtRelicLv = stopWhen;
+                        C.Save();
+                    }
+                    ImGui.SameLine();
+                    int relicLv = C.RelicLv;
+                    ImGui.SetNextItemWidth(150);
+                    if (ImGui.SliderInt("##RelicLvSlider", ref relicLv, 1, 20))
+                    {
+                        C.RelicLv = relicLv;
+                        C.SaveDebounced();
+                    }
+
                     ImGui_Ice.Draw_ExpTable(currentJobId);
                 }
             }

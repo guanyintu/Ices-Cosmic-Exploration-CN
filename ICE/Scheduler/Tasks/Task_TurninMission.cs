@@ -41,9 +41,9 @@ namespace ICE.Scheduler.Tasks
                 {
                     IceLogging.Verbose("Critical mission was found, checking for location info", tag);
 
-                    if (CosmicHelper.CriticalLocations.TryGetValue(id, out var location) && location.RawLocation != Vector3.Zero)
+                    if (GatheringUtil.CriticalSpots.TryGetValue(sheetInfo.Critical_MapKey, out var criticalInfo) && criticalInfo.WorldCords != Vector3.Zero)
                     {
-                        if (Player.DistanceTo(location.RawLocation) < 75)
+                        if (Player.DistanceTo(criticalInfo.WorldCords) < 75)
                         {
                             IceLogging.Verbose("We're close enough to the base location that we don't need to do any fancy traveling, going to check if we need to interact", tag);
                             P.TaskManager.Insert(() => RedAlert_CloseToTurnin(), "Checking to make sure we're close enough");
@@ -51,7 +51,7 @@ namespace ICE.Scheduler.Tasks
                         else
                         {
                             IceLogging.Verbose("We're far enough away that we need to consider taking the npc for getting there, so going to do so");
-                            P.TaskManager.Insert(() => Task_NavmeshMove.Enqueue_RedAlertNavmesh(location.RawLocation, distance: 75, missionId: id), "Checking to make sure we're close enough");
+                            P.TaskManager.Insert(() => Task_NavmeshMove.Enqueue_RedAlertNavmesh(criticalInfo.WorldCords, distance: 75, missionId: id), "Checking to make sure we're close enough");
                         }
                     }
                     else
@@ -120,13 +120,6 @@ namespace ICE.Scheduler.Tasks
 
                 // Complete the timer and get duration
                 var duration = P.MissionTimer.CompleteMission();
-
-                // Log the results
-                if (C.MissionConfig.TryGetValue(PreviousMissionId, out var config))
-                {
-                    if (config.BestTime != double.MaxValue)
-                        IceLogging.Info($"Mission [{PreviousMissionId}] [{CosmicHelper.SheetMissionDict[PreviousMissionId].Name}] completed in {duration:mm\\:ss\\.ff} | Best: {TimeSpan.FromSeconds(config.BestTime):mm\\:ss\\.ff} | Avg: {TimeSpan.FromSeconds(config.AverageTime):mm\\:ss\\.ff}", $"{tag} [Mission Timer]");
-                }
 
                 if (P.AutoHook.Installed)
                 {
@@ -247,10 +240,11 @@ namespace ICE.Scheduler.Tasks
                         if (EzThrottler.Throttle("Setting Turnin State", 2000))
                         {
                             var rank = Task_CheckScore.CurrentRank();
-                            Mission_Settings.TurninState = rank switch
+                            Mission_Settings.TurninState = (int)rank switch
                             {
-                                MissionRank.Gold => TurninState.Gold,
-                                MissionRank.Silver => TurninState.Silver,
+                                6 => TurninState.Master_Score,
+                                3 => TurninState.Gold,
+                                2 => TurninState.Silver,
                                 _ => TurninState.Bronze,
                             };
                         }

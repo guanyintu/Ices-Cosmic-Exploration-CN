@@ -1,4 +1,5 @@
-﻿using ICE.Utilities.Cosmic_Helper;
+﻿using ECommons.GameHelpers;
+using ICE.Utilities.Cosmic_Helper;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -24,8 +25,23 @@ namespace ICE.Scheduler.Tasks
                 C.MissionConfig.TryGetValue(missionId, out var config);
                 bool dualClass = (gatherMission && craftMission) || (fishingMission && craftMission);
 
-                if (C.OnlyGrabMission_Debug || (config != null && config.ManualMode) || UnsupportedMissions.Ids.Contains(missionId))
+                bool notUpdatedFisher = !P.AutoHook.UpdatedPlugin() && CosmicMoonRegistry.Auxesia.TerritoryId == Player.Territory.RowId && mission.Jobs.Contains(18);
+
+                if (C.OnlyGrabMission_Debug || UnsupportedMissions.Ids.Contains(missionId) || notUpdatedFisher)
                 {
+                    if (notUpdatedFisher && P.AutoHook.Installed)
+                    {
+                        string message = $"[I.C.E.] You didn't read the little warning in the mission setup\n" +
+                            "You need to update autohook for you to be able to fish here on Auxesia.\n" +
+                            "Please swap to testing version";
+                        IceLogging.Error($"{message}", "Execute Mission");
+                        Svc.Chat.Print(new()
+                        {
+                            Type = Dalamud.Game.Text.XivChatType.ErrorMessage,
+                            Message = message,
+                        });
+                        Svc.Toasts.ShowError($"{message}");
+                    }
                     SchedulerMain.State = IceState.ManualMode;
                 }
                 else if (dualClass)
@@ -106,31 +122,22 @@ namespace ICE.Scheduler.Tasks
         }
         private static void ImportPresetsSequentially(uint missionId)
         {
-            bool? ImportOtherPresets(string preset)
-            {
-                P.AutoHook.CreateAndSelectAnonymousPreset(preset);
-                return true;
-            }
-
             var presetList = CosmicHelper.SheetMissionDict[missionId].Fish_Presets;
 
             if (presetList.Count == 0)
                 return;
 
-            IceLogging.Debug($"Current Fish Preset Count for [{missionId}]: {presetList.Count}");
-
-            // Import first preset immediately
-            P.AutoHook.CreateAndSelectAnonymousPreset(presetList[0]);
-
-            // Queue remaining presets with delays
-            for (int i = 1; i < presetList.Count; i++)
+            var preset = presetList[0];
+            if (preset.StartsWith("AHFOLDER"))
             {
-                var preset = presetList[i]; // Capture for closure
-
-                P.TaskManager.EnqueueDelay(100);
-                P.TaskManager.Enqueue(() => ImportOtherPresets(preset));
+                IceLogging.Verbose("We found a folder! We're going to import that", "AH Import");
+                P.AutoHook.CreateAndSelectAnonymousFolder(preset);
+            }
+            else
+            {
+                IceLogging.Verbose("Basic Fishing preset (bless) single import it is", "AH Import");
+                P.AutoHook.CreateAndSelectAnonymousPreset(preset);
             }
         }
-
     }
 }

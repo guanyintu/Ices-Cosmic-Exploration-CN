@@ -37,7 +37,32 @@ public static partial class CosmicHelper
             }
         }
     }
-    public static unsafe uint? CurrentBait => WKSManager.Instance()->State.FishingBait;
+
+    public static unsafe uint CurrentBait()
+    {
+        var manager = WKSManager.Instance();
+        if (manager == null)
+            return 0;
+
+        return manager->State.FishingBait;
+    }
+    public static unsafe uint CurrentIndividual()
+    {
+        var manager = WKSManager.Instance();
+        if (manager == null)
+            return 0;
+
+        return manager->State.CurrentMission.CollectedIndividual;
+    }
+
+    public static unsafe uint CurrentTotal()
+    {
+        var manager = WKSManager.Instance();
+        if (manager == null)
+            return 0;
+
+        return manager->State.CurrentMission.CollectedTotal;
+    }
     // public static unsafe uint CurrentLunarDevelopment => ExcelHelper.DevGrade.GetRow(WKSManager.Instance()->DevGrade).Unknown6;
     public static unsafe uint CurrentLunarDevelopment = 0;
 
@@ -58,6 +83,12 @@ public static partial class CosmicHelper
     {
         public uint creditId { get; set; } = 0;
         public uint boxId { get; set; } = 0;
+    }
+    public class TokenInfo
+    {
+        public uint tokenId { get; set; } = 0;
+        public uint bookletId { get; set; } = 0;
+        public uint mountId { get; set; } = 0;
     }
 
     // General use functions used across the codebase, specifically tied to cosmic related functions
@@ -83,6 +114,7 @@ public static partial class CosmicHelper
     public class ClassInfo
     {
         public int Score { get; set; } = 0;
+        public int Mastery { get; set; } = 0;
         public int Stage_Current { get; set; } = 0;
         public int Stage_Next { get; set; } = 0;
         public Dictionary<int, ExpInfo> CurrentExp { get; set; } = new();
@@ -151,9 +183,19 @@ public static partial class CosmicHelper
                 ? maxStage
                 : (byte)(currentStage + 1);
 
+            // Mastery Score. Because ofc it's stored as a fucking item
+            var masteryScore = 0;
+            if (ExcelHelper.WKSScoreListSheet.TryGetRow((uint)i, out var scoreListSheet))
+            {
+                // Far right column aka Unknown5
+                var masteryItem = scoreListSheet.Unknown5;
+                PlayerHelper.GetItemCount(masteryItem, out masteryScore);
+            }
+
             ClassInfo entry = new()
             {
                 Score = score,
+                Mastery = masteryScore,
                 Stage_Current = currentStage,
                 Stage_Next = nextStage,
             };
@@ -184,6 +226,32 @@ public static partial class CosmicHelper
         foreach (var mission in CosmicHelper.SheetMissionDict)
             mission.Value.CompletionStatus = CosmicHandler.MissionStatus(mission.Key);
     }
+
+    /// <summary>Counts gold vs total for missions that are not provisional or critical on a hub/job.</summary>
+    public static (int Golded, int Total) CountStandardMissionGold(uint jobId, uint territoryId)
+    {
+        int golded = 0, total = 0;
+        foreach (var (_, info) in SheetMissionDict)
+        {
+            if (info.TerritoryId != territoryId || !info.Jobs.Contains(jobId))
+                continue;
+            if (info.IsProvisional || info.IsCritical)
+                continue;
+
+            total++;
+            if (info.CompletionStatus == Status.Gold)
+                golded++;
+        }
+
+        return (golded, total);
+    }
+
+    public static bool AllStandardMissionsGolded(uint jobId, uint territoryId)
+    {
+        var (golded, total) = CountStandardMissionGold(jobId, territoryId);
+        return total > 0 && golded == total;
+    }
+
     public static unsafe bool Task_UpdateRelicMissionInfo()
     {
         string tag = "Task: Update Cosmic Info";

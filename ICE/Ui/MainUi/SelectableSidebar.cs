@@ -1,4 +1,4 @@
-using Dalamud.Interface;
+﻿using Dalamud.Interface;
 using Dalamud.Interface.Utility;
 using Dalamud.Interface.Utility.Raii;
 using ECommons.GameHelpers;
@@ -36,13 +36,13 @@ namespace ICE.Ui.MainUi
 
                 if (ImGui_Ice.Sidebar_CollaspableHeader("Cosmic Helper", SidebarTabs.CosmicHelper, icon: FontAwesomeIcon.ListAlt))
                 {
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.List, T("Mission Setup"), WindowSelection.MissionSetup);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.ClipboardList, T("Cosmic Agenda"), WindowSelection.CosmicAgenda);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Trophy, T("Expedition Log"), WindowSelection.ExpeditionLogs);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.List, "Mission Setup", WindowSelection.MissionSetup);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.ClipboardList, "Cosmic Agenda", WindowSelection.CosmicAgenda);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Trophy, "Expedition Log", WindowSelection.ExpeditionLogs);
                 }
                 if (ImGui_Ice.Sidebar_CollaspableHeader("Planet Selection", SidebarTabs.PlanetSelection, FontAwesomeIcon.Moon))
                 {
-                    if (ImGui_Ice.SliderButton("AutoSelectMoon", T("Auto Select"), ref autoSelectMoon))
+                    if (ImGui_Ice.SliderButton("AutoSelectMoon", "Auto Select", ref autoSelectMoon))
                     {
                         C.AutoSelectMoon = autoSelectMoon;
                         C.Save();
@@ -57,7 +57,7 @@ namespace ICE.Ui.MainUi
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.BeginTooltip();
-                        ImGui.Text(T("Filters which planets appear in the\nmission list and the overlay."));
+                        ImGui.Text("Filters which planets appear in the\nmission list and the overlay.");
                         ImGui.EndTooltip();
                     }
                     ImGui.Dummy(new(0, 3));
@@ -80,7 +80,7 @@ namespace ICE.Ui.MainUi
                         if (ImGui_Ice.DrawStyledImageButton(texture, new Vector2(iconSize, iconSize), isEnabled))
                         {
                             C.ItemFilter = isEnabled
-                                ? C.ItemFilter & ~moon.PlanetFilter  // was on → turn off
+                                ? C.ItemFilter & ~moon.PlanetFilter  // was on → turn off 
                                 : C.ItemFilter | moon.PlanetFilter;  // was off → turn on
                             C.AutoSelectMoon = false;
                             if (Mission_Setup.MissionTable != null)
@@ -97,20 +97,22 @@ namespace ICE.Ui.MainUi
                 }
                 if (ImGui_Ice.Sidebar_CollaspableHeader("Hub Activities", SidebarTabs.HubActivites, icon: FontAwesomeIcon.Home))
                 {
-                    ImGui_Ice.DrawSelectable_Image(65112, T("Credit Shopping"), WindowSelection.CreditShopping);
-                    ImGui_Ice.DrawSelectable_Image(65127, T("Gambling Settings"), WindowSelection.GambaShopping);
+                    ImGui_Ice.DrawSelectable_Image(65112, "Credit Shopping", WindowSelection.CreditShopping);
+                    ImGui_Ice.DrawSelectable_Image(65127, "Gambling Settings", WindowSelection.GambaShopping);
 
                     if (ShowDronebitSettings())
-                        ImGui_Ice.DrawSelectable_Image(65138, T("Dronebit Settings"), WindowSelection.DroneShopping);
+                        ImGui_Ice.DrawSelectable_Image(65138, "Dronebit Settings", WindowSelection.DroneShopping);
+
+                    ImGui_Ice.DrawSelectable_Image(26176, "Mount Tokens", WindowSelection.MountShopping);
                 }
                 if (ImGui_Ice.Sidebar_CollaspableHeader("Settings", SidebarTabs.Settings, icon: FontAwesomeIcon.Cog))
                 {
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Stop, T("Stop When..."), WindowSelection.StopWhen);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Leaf, T("Gathering Profile"), WindowSelection.GatheringProfiles);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.SortAmountUp, T("Mission Priority"), WindowSelection.MissionPriority);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Route, T("Travel & Pathfinding"), WindowSelection.TravelSettings);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.PersonBurst, T("Character Settings"), WindowSelection.CharacterSettings);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.UserCog, T("Misc Settings"), WindowSelection.MiscSettings);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Stop, "Stop When...", WindowSelection.StopWhen);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Leaf, "Gathering Profile", WindowSelection.GatheringProfiles);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.SortAmountUp, "Mission Priority", WindowSelection.MissionPriority);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Route, "Travel & Pathfinding", WindowSelection.TravelSettings);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.PersonBurst, "Character Settings", WindowSelection.CharacterSettings);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.UserCog, "Misc Settings", WindowSelection.MiscSettings);
                 }
 
                 var currentClass = C.SelectedJob;
@@ -126,7 +128,7 @@ namespace ICE.Ui.MainUi
 
 
                 var classIcon = ImGui_Ice.GetGreyscaleJob(currentClass);
-                if (ImGui_Ice.Sidebar_CollaspableHeader(T("Select Class"), SidebarTabs.ClassSelection, imageTexture: classIcon))
+                if (ImGui_Ice.Sidebar_CollaspableHeader("Select Class", SidebarTabs.ClassSelection, imageTexture: classIcon))
                 {
                     int itemsPerRow = 4;
                     int currentItem = 0;
@@ -135,7 +137,7 @@ namespace ICE.Ui.MainUi
                     float iconSpacing = 4;
                     float leftOffset = 10f; // Simple offset from the current position
 
-                    if (ImGui_Ice.SliderButton("AutoSelectJob", T("Auto Select Job"), ref autoSelectedJob))
+                    if (ImGui_Ice.SliderButton("AutoSelectJob", "Auto Select Job", ref autoSelectedJob))
                     {
                         C.AutoPickCurrentJob = autoSelectedJob;
                         C.Save();
@@ -164,9 +166,9 @@ namespace ICE.Ui.MainUi
                 if (ImGui_Ice.Sidebar_CollaspableHeader("Need Help?", SidebarTabs.HelpInfo, FontAwesomeIcon.QuestionCircle))
                 {
                  // ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.HandHoldingHand, "Plugin Tips", WindowSelection.Plugin_Tips);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.QuestionCircle, T("Plugin Requirements"), WindowSelection.Plugin_Install);
-                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Book, T("Plugin Logs"), WindowSelection.Plugin_Logs);
-                    if (ImGuiEx.IconButtonWithText(FontAwesomeIcon.Toolbox, T("Refresh Class info"), size: new(ImGui.GetContentRegionAvail().X, 30)))
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.QuestionCircle, "Plugin Requirements", WindowSelection.Plugin_Install);
+                    ImGui_Ice.DrawSelectable_Icon(FontAwesomeIcon.Book, "Plugin Logs", WindowSelection.Plugin_Logs);
+                    if (ImGuiEx.IconButtonWithText(FontAwesomeIcon.Toolbox, "Refresh Class info", size: new(ImGui.GetContentRegionAvail().X, 30)))
                     {
                         CosmicHelper.Task_UpdateRelicMissionInfo();
                     }

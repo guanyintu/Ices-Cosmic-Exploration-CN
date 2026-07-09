@@ -2,10 +2,13 @@
 using Dalamud.Game.ClientState.Conditions;
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.Game.WKS;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ICE.Scheduler.Handlers.PictoStuff;
 using ICE.Utilities.Cosmic_Helper;
+using ICE.Utilities.GatheringHelper;
 using ICE.Utilities.GatheringHelper.RouteLoader;
+using Lumina.Excel.Sheets;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
@@ -95,11 +98,19 @@ namespace ICE.Scheduler.Tasks
             // Handle starting navmesh
             return HandleStartNavmesh(pos, distance, stayMounted, npcLoc, usingCosmoliner, mounted, distanceToTarget, handle, useMount, mountBeforeMove);
         }
+        private static readonly Dictionary<uint, Vector3> _cachedGatherPositions = new();
+        private static uint _lastGatherNodeKey = 0;
+
+        public static void ResetGatherMove()
+        {
+            _cachedGatherPositions.Clear();
+            _lastGatherNodeKey = 0;
+        }
+
         public static bool? Task_GatherMove(NodeInfo routeinfo, bool waitForBusy = true, float distance = 3.5f, bool stayMounted = false, bool mountBeforeMove = false)
         {
             string handle = "Navmesh: Gather Move";
 
-            // Cache frequently accessed values
             bool usingCosmoliner = Svc.Condition[ConditionFlag.Unknown101];
             bool mounted = Player.Mounted;
             bool inMission = CosmicHelper.CurrentLunarMission != 0;
@@ -110,14 +121,12 @@ namespace ICE.Scheduler.Tasks
             if (EzThrottler.Throttle("Navmesh message throttle", navmeshThrottleMs))
                 IceLogging.Verbose("Executing Navmesh Task", handle, debugOnly: true);
 
-            // Early exit if navmesh not installed
             if (!P.Navmesh.Installed)
             {
                 IceLogging.Info("We seem to be missing navmesh... so we're just going to exit here", handle);
                 return true;
             }
 
-            // Handle navmesh not ready
             if (!P.Navmesh.IsReady())
             {
                 if (EzThrottler.Throttle("Waiting on navmesh", waitingThrottleMs))
@@ -128,37 +137,37 @@ namespace ICE.Scheduler.Tasks
                 return false;
             }
 
-            // This is where we need to get a random point in a fan if possible...
-            // Esentially going to pass this once mainly for the pathing, and then if we meed the minimum distance the HandleRunningNavmesh should take care of properly returning if we're within interacting range once stop moving
-
             Vector3 nodePos = routeinfo.Position;
-            Vector3 playerPos = Player.Position;
-            float angleToPlayer = CalculateAngleToPlayer(nodePos, playerPos);
+            uint nodeKey = routeinfo.NodeId;
 
-            float node_MinAngle = routeinfo.RadiusStart;
-            float node_MaxAngle = routeinfo.RadiusEnd;
-
-            bool isInsideFan = IsAngleInRange(angleToPlayer, node_MinAngle, node_MaxAngle);
-            float sectionSize = isInsideFan ? 30f : 60f;
-
-            var (sectionMin, sectionMax) = GetNearestSection(node_MinAngle, node_MaxAngle, angleToPlayer, sectionSize);
-            float selectedAngle = RandomAngleInRange(sectionMin, sectionMax);
-            float selectedDistance = NextFloat(routeinfo.MinDistance, routeinfo.MaxDistance);
-
-            Vector3 randomPosition = CalculateFanPosition(nodePos, selectedAngle, selectedDistance, routeinfo.FanHeight);
-            // if (EzThrottler.Throttle("Gather Route Throttle", 3000))
-            // IceLogging.Debug($"[GatherMove] angleToPlayer={angleToPlayer:F1}, node_MinAngle={node_MinAngle:F1}, node_MaxAngle={node_MaxAngle:F1}, sectionMin={sectionMin:F1}, sectionMax={sectionMax:F1}, selectedAngle={selectedAngle:F1}, selectedDistance={selectedDistance:F2}, minDist={routeinfo.Distance_Min}, maxDist={routeinfo.Distance_Max}, randomPosition={randomPosition}", handle);
-
-            float distanceToTarget = Player.DistanceTo(nodePos);
-
-            // Handle running navmesh
-            if (P.Navmesh.IsRunning())
+            if (_lastGatherNodeKey != nodeKey || !_cachedGatherPositions.ContainsKey(nodeKey))
             {
-                return HandleRunningNavmesh(randomPosition, waitForBusy, distance, stayMounted, nodePos, usingCosmoliner, mounted, useMount, minMountDistance, dismountDistance, distanceToTarget, handle);
+                Vector3 randomPosition = Gather_RandomFanPosition(routeinfo);
+                _cachedGatherPositions[nodeKey] = randomPosition;
+                _lastGatherNodeKey = nodeKey;
             }
 
-            // Handle starting navmesh
-            return HandleStartNavmesh(randomPosition, distance, stayMounted, nodePos, usingCosmoliner, mounted, distanceToTarget, handle, useMount, mountBeforeMove);
+            Vector3 cachedPos = _cachedGatherPositions[nodeKey];
+            float distanceToTarget = Player.DistanceTo(nodePos);
+
+            if (P.Navmesh.IsRunning())
+            {
+                var result = HandleRunningNavmesh(cachedPos, waitForBusy, distance, stayMounted, nodePos, usingCosmoliner, mounted, useMount, minMountDistance, dismountDistance, distanceToTarget, handle);
+                if (result == true)
+                {
+                    _cachedGatherPositions.Remove(nodeKey);
+                    _lastGatherNodeKey = 0;
+                }
+                return result;
+            }
+
+            var startResult = HandleStartNavmesh(cachedPos, distance, stayMounted, nodePos, usingCosmoliner, mounted, distanceToTarget, handle, useMount, mountBeforeMove);
+            if (startResult == true)
+            {
+                _cachedGatherPositions.Remove(nodeKey);
+                _lastGatherNodeKey = 0;
+            }
+            return startResult;
         }
         private static bool ShouldUseMount(bool inMission)
         {
@@ -522,15 +531,66 @@ namespace ICE.Scheduler.Tasks
                     AethernetId = 2015424,
                     Location = new(-242.73f, 168.05f, 321.17f),
                     LandZone = new(-243.1f, 168.0f, 320.6f)
+                },
+                new()
+                {
+                    MapSelector = 3,
+                    AethernetId = 2015425,
+                    Location = new(-599.94f, 206.55f, -375.08f),
+                    LandZone = new(-599.77f, 206.55f, -373.25f),
+                    RequiredLogLv = 232,
+                },
+                new()
+                {
+                    MapSelector = 4,
+                    AethernetId = 2015426,
+                    Location = new(-676.35f, 115.00f, 626.07f),
+                    LandZone = new(-674.68f, 115.50f, 621.65f),
+
                 }
             }
         };
         private static Task? _PathCalculations = null;
 
+        public class WKSAetherInfo
+        {
+            public string Name { get; set; } = string.Empty;
+            public List<uint> BaseId { get; set; } = new();
+            public bool Unlocked { get; set; } = false;
+        }
+
+        public static Dictionary<uint, WKSAetherInfo> MoonAethernet = new();
+        private static void UpdateDict()
+        {
+            if (MoonAethernet.Count == 0)
+            {
+                var wksAetheryteSheet = Svc.Data.GetExcelSheet<WKSAetheryte>();
+                foreach (var aetherSheet in wksAetheryteSheet)
+                {
+                    var rowId = aetherSheet.RowId;
+                    if (rowId == 0)
+                        continue;
+
+                    string name = aetherSheet.Name.Value.Name.ToString();
+
+                    var ids = aetherSheet.ObjectGroup.Value.Select(s => s.Unknown0).ToList();
+
+                    uint baseId = aetherSheet.ObjectGroup.Value.First().Unknown0;
+                    MoonAethernet[rowId] = new()
+                    {
+                        Name = name,
+                        BaseId = ids,
+                        Unlocked = AgentWKSMissionEx.IsWKSAetheryteUnlocked((byte)rowId)
+                    };
+                }
+            }
+        }
+
         public static void Enqueue_NavmeshTask(Vector3 destination, bool waitForBusy = true, float distance = 2.0f)
         {
             if (P.Navmesh.Installed)
             {
+                UpdateDict();
                 P.TaskManager.InsertMulti
                 (
                     new(() => Paths_Clear(), "Clearing all Navmesh Paths"),
@@ -550,6 +610,7 @@ namespace ICE.Scheduler.Tasks
         {
             if (P.Navmesh.Installed)
             {
+                UpdateDict();
                 P.TaskManager.InsertMulti
                 (
                     new(() => Paths_Clear(), "Clearing all Navmesh Paths"),
@@ -578,35 +639,19 @@ namespace ICE.Scheduler.Tasks
             }
             return true;
         }
+        private static unsafe uint WorldProgress()
+        {
+            var wks = WKSManager.Instance();
+            if (wks == null)
+                return 0;
 
-        public static Dictionary<uint, uint> PlanetProgress { get; } =
-            CosmicMoonRegistry.All.ToDictionary(m => m.TerritoryId, m => m.DefaultAethernetLogLevel);
-
+            return wks->State.DevGrade;
+        }
         private static bool? CalculateAethernet(Vector3 destination)
         {
             string tag = "Navmesh: Aethernet Calculation";
             var territoryId = Player.Territory.RowId;
-            var planetProgress = PlanetProgress[territoryId];
-
-            if (planetProgress == 0)
-            {
-                if (GenericHelpers.TryGetAddonMaster<WKSHistoryBoard>("WKSHistoryBoard", out var progress) && progress.IsAddonReady)
-                {
-                    PlanetProgress[territoryId] = progress.NumEntries;
-                    IceLogging.Info($"We've updated the entried to contain the following value: {PlanetProgress[territoryId]}");
-                    if (EzThrottler.Throttle("Closing addon"))
-                        GenericHandlers.FireCallback("WKSHistoryBoard", true, -1);
-                }
-                else if (GenericHelpers.TryGetAddonMaster<WKSHud>("WKSHud", out var hud) && hud.IsAddonReady)
-                {
-                    if (EzThrottler.Throttle("Opening Progress Hud"))
-                    {
-                        hud.Infrastructor();
-                    }
-                }
-
-                return false;
-            }
+            var planetProgress = WorldProgress();
 
             var territory = Player.Territory.RowId;
             if (!PlanetAethernet.TryGetValue(territory, out var aetherList))
@@ -622,10 +667,10 @@ namespace ICE.Scheduler.Tasks
             }
 
             var closestAetheryte = aetherList
-                .Where(x => x.RequiredLogLv <= planetProgress)
+                .Where(x => MoonAethernet.Any(y => y.Value.BaseId.Contains(x.AethernetId) && y.Value.Unlocked))
                 .OrderBy(x => Player.DistanceTo(x.Location)).FirstOrDefault();
             var destinationAetheryte = aetherList
-                .Where(x => x.RequiredLogLv <= planetProgress)
+                .Where(x => MoonAethernet.Any(y => y.Value.BaseId.Contains(x.AethernetId) && y.Value.Unlocked))
                 .OrderBy(x => Vector3.Distance(x.Location, destination)).FirstOrDefault();
 
             if (closestAetheryte == null || destinationAetheryte == null)
@@ -758,6 +803,8 @@ namespace ICE.Scheduler.Tasks
             string tag = "Navmesh: Position -> Red Alert";
             var territoryId = Player.Territory.RowId;
 
+            var criticalKey = CosmicHelper.SheetMissionDict[missionId].Critical_MapKey;
+
             if (!C.UseRedAlertNpc)
             {
                 IceLogging.Info("We were told not to use the red alert NPC travel method, so we're going to just nope out of here", tag);
@@ -767,9 +814,9 @@ namespace ICE.Scheduler.Tasks
             {
                 if (planetInfo.TryGetValue(NpcData.NpcType.RedAlert, out var npcInfo))
                 {
-                    if (!CosmicHelper.CriticalLocations.TryGetValue(missionId, out var approxStart))
+                    if (!GatheringUtil.CriticalSpots.TryGetValue(criticalKey, out var approxStart))
                     {
-                        IceLogging.Warning($"No red-alert turn-in coords for mission {missionId} on {CosmicMoonRegistry.GetDisplayName(territoryId)} — add to RedAlert_Selection", tag);
+                        IceLogging.Warning($"No red-alert turn-in coords for critical route: {criticalKey} on {CosmicMoonRegistry.GetDisplayName(territoryId)} — add to RedAlert_Selection", tag);
                         return true;
                     }
 
@@ -782,7 +829,7 @@ namespace ICE.Scheduler.Tasks
                         _PathCalculations = Task.Run(async () =>
                         {
                             method.pathTo = await FindPath(start, npcInfo.Location_Circle);
-                            method.pathFrom = await FindPath(approxStart.RawLocation, destination);
+                            method.pathFrom = await FindPath(approxStart.WorldCords, destination);
                         });
                         if (EzThrottler.Throttle("Started task: Direct"))
                             IceLogging.Verbose("Started to calculate path", tag);
@@ -918,7 +965,7 @@ namespace ICE.Scheduler.Tasks
         {
             string tag = "[Navmesh: Calculate Hub -> Aethernet]";
             var territoryId = Player.Territory.RowId;
-            var planetProgress = PlanetProgress[territoryId];
+            var planetProgress = WorldProgress();
 
             if (CosmicMoonRegistry.TryGetHubCenter(Player.Territory.RowId, out var HubCenter))
             {
@@ -944,9 +991,11 @@ namespace ICE.Scheduler.Tasks
                         return true;
                     }
 
-                    var closestAetheryte = aetherList.OrderBy(x => Vector3.Distance(HubCenter, x.Location)).FirstOrDefault();
+                    var closestAetheryte = aetherList
+                        .Where(x => MoonAethernet.Any(y => y.Value.BaseId.Contains(x.AethernetId) && y.Value.Unlocked))
+                        .OrderBy(x => Vector3.Distance(HubCenter, x.Location)).FirstOrDefault();
                     var destinationAetheryte = aetherList
-                        .Where(x => x.RequiredLogLv <= planetProgress)
+                        .Where(x => MoonAethernet.Any(y => y.Value.BaseId.Contains(x.AethernetId) && y.Value.Unlocked))
                         .OrderBy(x => Vector3.Distance(x.Location, destination)).FirstOrDefault();
 
                     if (closestAetheryte == null || destinationAetheryte == null)
@@ -1041,6 +1090,8 @@ namespace ICE.Scheduler.Tasks
             var territoryId = Player.Territory.RowId;
             var method = TravelMethods[TravelTypes.Hub_RedAlert];
 
+            var criticalKey = CosmicHelper.SheetMissionDict[missionId].Critical_MapKey;
+
             if (!C.UseHubReturn)
                 return true;
 
@@ -1050,7 +1101,7 @@ namespace ICE.Scheduler.Tasks
             if (!CosmicHelper.SheetMissionDict[missionId].IsCritical)
                 return true;
 
-            if (!CosmicHelper.CriticalLocations.TryGetValue(missionId, out var approxStart))
+            if (!GatheringUtil.CriticalSpots.TryGetValue(criticalKey, out var criticalInfo))
             {
                 IceLogging.Warning($"No red-alert turn-in coords for mission {missionId} — hub return via NPC skipped");
                 return true;
@@ -1074,7 +1125,7 @@ namespace ICE.Scheduler.Tasks
                                 _PathCalculations = Task.Run(async () =>
                                 {
                                     method.pathTo = await FindPath(HubCenter, npcInfo.Location_Circle);
-                                    method.pathFrom = await FindPath(approxStart.RawLocation, destination);
+                                    method.pathFrom = await FindPath(criticalInfo.WorldCords, destination);
                                 });
                                 if (EzThrottler.Throttle("Started task: Direct"))
                                     IceLogging.Verbose("Started to calculate path", tag);
@@ -1221,7 +1272,6 @@ namespace ICE.Scheduler.Tasks
 
             return true;
         }
-
         private static unsafe bool? TravelToAethershard(PathInfo shardInfo)
         {
             string tag = "[Navmesh: Aethershard movement]";
@@ -1313,8 +1363,9 @@ namespace ICE.Scheduler.Tasks
             string tag = "Travel: Via RedAlert NPC";
 
             IceLogging.Verbose("Travel via Npc commenced", tag);
+            var criticalKey = CosmicHelper.SheetMissionDict[missionId].Critical_MapKey;
 
-            if (CosmicHelper.CriticalLocations.TryGetValue(missionId, out var redAlert))
+            if (GatheringUtil.CriticalSpots.TryGetValue(criticalKey, out var criticalInfo))
             {
                 if (Player.DistanceTo(redAlertNpc.Location_Circle) < 5)
                 {
@@ -1342,8 +1393,8 @@ namespace ICE.Scheduler.Tasks
                     {
                         if (EzThrottler.Throttle("Selecting teleport option"))
                         {
-                            IceLogging.Verbose($"Selecting Option: {redAlert.NpcSelection} for mission: {missionId}", tag);
-                            selectString.Entries[redAlert.NpcSelection].Select();
+                            IceLogging.Verbose($"Selecting Option: {criticalInfo.NpcSelector} for mission: {missionId}", tag);
+                            selectString.Entries[criticalInfo.NpcSelector].Select();
                         }
                     }
                     else if (GenericHelpers.TryGetAddonMaster<SelectYesno>(out var yesNo) && yesNo.IsAddonReady)
@@ -1382,7 +1433,7 @@ namespace ICE.Scheduler.Tasks
                         }
                     }
                 }
-                else if (Player.DistanceTo(redAlert.RawLocation) < 75)
+                else if (Player.DistanceTo(criticalInfo.WorldCords) < 75)
                 {
                     if (!PlayerHelper.IsScreenReady())
                         return false;
@@ -1438,7 +1489,7 @@ namespace ICE.Scheduler.Tasks
             return ffxivAngle;
         }
 
-        private static float CalculateAngleToPlayer(Vector3 nodePos, Vector3 playerPos)
+        public static float CalculateAngleToPlayer(Vector3 nodePos, Vector3 playerPos)
         {
             Vector3 direction = playerPos - nodePos;
             float angle = MathF.Atan2(direction.X, direction.Z) * (180f / MathF.PI);
@@ -1475,7 +1526,6 @@ namespace ICE.Scheduler.Tasks
 
             return span;
         }
-
         private static bool IsAngleInRange(float angle, float min, float max)
         {
             angle = NormalizeAngle(angle);
@@ -1494,7 +1544,6 @@ namespace ICE.Scheduler.Tasks
             else
                 return angle >= min || angle <= max;
         }
-
         private static float GetAngularDistance(float angle1, float angle2)
         {
             angle1 = NormalizeAngle(angle1);
@@ -1506,7 +1555,6 @@ namespace ICE.Scheduler.Tasks
 
             return MathF.Abs(diff);
         }
-
         private static float ClampAngleToRange(float angle, float allowedMin, float allowedMax, bool preferMin)
         {
             angle = NormalizeAngle(angle);
@@ -1522,7 +1570,6 @@ namespace ICE.Scheduler.Tasks
 
             return distToMin < distToMax ? allowedMin : allowedMax;
         }
-
         private static (float sectionMin, float sectionMax) GetNearestSection(float allowedMin, float allowedMax, float targetAngle, float sectionSize)
         {
             float rangeSpan = GetRangeSpan(allowedMin, allowedMax);
@@ -1537,22 +1584,33 @@ namespace ICE.Scheduler.Tasks
             allowedMax = NormalizeAngle(allowedMax);
             targetAngle = NormalizeAngle(targetAngle);
 
-            float closestPointInRange = IsAngleInRange(targetAngle, allowedMin, allowedMax)
-                ? targetAngle
-                : GetAngularDistance(targetAngle, allowedMin) < GetAngularDistance(targetAngle, allowedMax)
-                    ? allowedMin
-                    : allowedMax;
+            if (IsAngleInRange(targetAngle, allowedMin, allowedMax))
+            {
+                // Target is inside fan — center section on it as before
+                float half = sectionSize / 2f;
+                float secMin = ClampAngleToRange(NormalizeAngle(targetAngle - half), allowedMin, allowedMax, true);
+                float secMax = ClampAngleToRange(NormalizeAngle(targetAngle + half), allowedMin, allowedMax, false);
+                return (secMin, secMax);
+            }
+            else
+            {
+                // Target is outside fan — find nearest edge and carve inward
+                bool nearMax = GetAngularDistance(targetAngle, allowedMax) < GetAngularDistance(targetAngle, allowedMin);
 
-            float half = sectionSize / 2f;
-            float secMin = NormalizeAngle(closestPointInRange - half);
-            float secMax = NormalizeAngle(closestPointInRange + half);
-
-            secMin = ClampAngleToRange(secMin, allowedMin, allowedMax, true);
-            secMax = ClampAngleToRange(secMax, allowedMin, allowedMax, false);
-
-            return (secMin, secMax);
+                if (nearMax)
+                {
+                    // Nearest edge is allowedMax, carve inward toward allowedMin
+                    float secMin = ClampAngleToRange(NormalizeAngle(allowedMax - sectionSize), allowedMin, allowedMax, true);
+                    return (secMin, allowedMax);
+                }
+                else
+                {
+                    // Nearest edge is allowedMin, carve inward toward allowedMax
+                    float secMax = ClampAngleToRange(NormalizeAngle(allowedMin + sectionSize), allowedMin, allowedMax, false);
+                    return (allowedMin, secMax);
+                }
+            }
         }
-
         private static float RandomAngleInRange(float min, float max)
         {
             min = NormalizeAngle(min);
@@ -1564,12 +1622,10 @@ namespace ICE.Scheduler.Tasks
             float rangeSize = (360f - min) + max;
             return NormalizeAngle(min + NextFloat(0, rangeSize));
         }
-
         private static float NextFloat(float min, float max)
         {
             return min + (float)_random.NextDouble() * (max - min);
         }
-
         private static Vector3 CalculateFanPosition(Vector3 center, float angleDegrees, float distance, float height)
         {
             float standardAngle = 180f - angleDegrees;
@@ -1581,9 +1637,32 @@ namespace ICE.Scheduler.Tasks
                 center.Z + distance * MathF.Cos(angleRadians)
             );
         }
+        public static Vector3 Gather_RandomFanPosition(NodeInfo startNode)
+        {
+            float node_MinAngle = startNode.RadiusStart;
+            float node_MaxAngle = startNode.RadiusEnd;
+            float rangeSpan = Task_NavmeshMove.GetRangeSpan(node_MinAngle, node_MaxAngle);
+            float sectionSize = C.GatherFanSectionSize;
+
+            float selectedAngle;
+            if (rangeSpan >= 359.9f)
+            {
+                // Full fan — pure random, no bias
+                selectedAngle = Task_NavmeshMove.RandomAngleInRange(node_MinAngle, node_MaxAngle);
+            }
+            else
+            {
+                // Partial fan — find the section closest to where the player is approaching from
+                float angleToPlayer = Task_NavmeshMove.CalculateAngleToPlayer(startNode.Position, Player.Position);
+                var (sectionMin, sectionMax) = Task_NavmeshMove.GetNearestSection(node_MinAngle, node_MaxAngle, angleToPlayer, sectionSize);
+                selectedAngle = Task_NavmeshMove.RandomAngleInRange(sectionMin, sectionMax);
+            }
+
+            float selectedDistance = Task_NavmeshMove.NextFloat(startNode.MinDistance, startNode.MaxDistance);
+            return Task_NavmeshMove.CalculateFanPosition(startNode.Position, selectedAngle, selectedDistance, startNode.FanHeight);
+        }
 
         #endregion
-
         private static void CloseExtraWindows()
         {
             if (EzThrottler.Throttle("Closing Extra Windows"))

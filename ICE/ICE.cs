@@ -5,7 +5,6 @@ using ICE.ConfigFiles;
 using ICE.IPC;
 using ICE.Ui;
 using ICE.Utilities.Cosmic_Helper;
-using ICE.Utilities.GatheringHelper;
 using Pictomancy;
 using System.Collections.Generic;
 using Dalamud.IoC;
@@ -48,6 +47,7 @@ public sealed partial class ICE : IDalamudPlugin
     internal VislandIPC Visland;
     internal AutoHookIPC AutoHook;
     internal IceCosmicExplorationIPC IceIpc;
+    internal GlamourerIPC GlamourIpc;
 
     public ICE(IDalamudPluginInterface pi)
     {
@@ -69,6 +69,7 @@ public sealed partial class ICE : IDalamudPlugin
         Visland = new();
         AutoHook = new();
         IceIpc = new();
+        GlamourIpc = new(Svc.PluginInterface);
 
         // all the windows
         windowSystem = new();
@@ -143,6 +144,15 @@ public sealed partial class ICE : IDalamudPlugin
                 if (SchedulerMain.State != IceState.Idle)
                     SchedulerMain.Tick();
                 WeatherForecastHandler.Tick();
+
+                if (C.FakeIncreaseFisher)
+                {
+                    GlamourIpc.SetClownHead();
+                }
+                else
+                {
+                    GlamourIpc.ResetClownHead();
+                }
             }
             else
             {
@@ -166,8 +176,6 @@ public sealed partial class ICE : IDalamudPlugin
     {
         if (PlayerHelper.IsInCosmicZone() && Player.Available)
         {
-            
-
             PictoManager.DrawPicto();
         }
     }

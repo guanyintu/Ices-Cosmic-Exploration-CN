@@ -2,7 +2,7 @@
 <Project Sdk="Dalamud.NET.Sdk/15.0.0">
 
 	<PropertyGroup>
-		<Version>0.0.78.7000</Version>
+		<Version>1.0.0.0</Version>
 		<Description>Who said we couldn't explore the moon!.</Description>
 		<PackageProjectUrl>https://github.com/goatcorp/ICE</PackageProjectUrl>
 		<PackageLicenseExpression>AGPL-3.0-or-later</PackageLicenseExpression>
@@ -16,6 +16,9 @@
 
 	<ItemGroup>
 		<Content Include="ICE.json" />
+		<EmbeddedResource Include="Resources\TrophyIcons\bronze_trophy.png" />
+		<EmbeddedResource Include="Resources\TrophyIcons\gold_trophy.png" />
+		<EmbeddedResource Include="Resources\TrophyIcons\silver_trophy.png" />
 		<EmbeddedResource Include="Resources\Auxesia.png" />
 		<EmbeddedResource Include="Resources\ResearchIcons\advance.png" />
 		<EmbeddedResource Include="Resources\ResearchIcons\expert.png" />
@@ -54,28 +57,34 @@
 	</ItemGroup>
 
 	<ItemGroup>
-		<PackageReference Include="ECommons" Version="3.2.1.6" />
+		<PackageReference Include="ECommons" Version="3.2.1.15" />
 		<PackageReference Include="NAudio" Version="2.3.0" />
 		<PackageReference Include="Pictomancy" Version="1.0.9" />
 		<PackageReference Include="TerraFX.Interop.Windows" Version="10.0.26100.6" />
-		<PackageReference Include="YamlDotNet" Version="18.0.0" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<ProjectReference Include="..\OtterGui\OtterGui.csproj" />
+		<ProjectReference Include="..\Glamourer.Api\Glamourer.Api.csproj" />
 	</ItemGroup>
 
 	<ItemGroup>
 		<PackageReference Update="DalamudPackager" Version="15.0.0" />
-		<PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.2" />
+		<PackageReference Update="DotNet.ReproducibleBuilds" Version="2.0.5" />
 	</ItemGroup>
 
 	<ItemGroup>
 	  <Folder Include="Resources\GatherRoutes\" />
+	  <Folder Include="Ui\NewFolder\" />
 	</ItemGroup>
 
 	<!-- OtterGui depends on nested submodule OtterGuiInternal; init recursively if missing -->
 	<Target Name="EnsureOtterGuiSubmodules" BeforeTargets="BeforeBuild" Condition="!Exists('$(MSBuildThisFileDirectory)..\OtterGui\OtterGuiInternal\OtterGuiInternal.csproj')">
 		<Exec Command="git submodule update --init --recursive OtterGui" WorkingDirectory="$(MSBuildThisFileDirectory).." />
+	</Target>
+
+	<!-- Glamourer IPC types live in the Glamourer.Api submodule -->
+	<Target Name="EnsureGlamourerApiSubmodule" BeforeTargets="BeforeBuild" Condition="!Exists('$(MSBuildThisFileDirectory)..\Glamourer.Api\Glamourer.Api.csproj')">
+		<Exec Command="git submodule update --init Glamourer.Api" WorkingDirectory="$(MSBuildThisFileDirectory).." />
 	</Target>
 </Project>

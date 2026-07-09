@@ -10,11 +10,14 @@ namespace ICE.Ui.MainUi.Settings
 {
     internal class StopWhen
     {
-        public static bool AnyStop => C.StopOnceHitCosmicScore
-                                   || C.StopWhenLevel
-                                   || C.StopOnceHitCosmoCredits
-                                   || C.StopOnceHitLunarCredits
-                                   || C.StopOnceRelicFinished;
+        public static bool AnyStop => 
+           C.StopOnceHitCosmicScore
+        || C.StopWhenLevel
+        || C.StopOnceHitCosmoCredits
+        || C.StopOnceHitLunarCredits
+        || C.StopOnceRelicFinished
+        || C.StopOnceStandardMissionsGolded
+        || C.StopWhenMasteryComplete;
 
         public static void Draw()
         {
@@ -117,6 +120,59 @@ ImGui.Checkbox(T("Stop after current mission"), ref Mission_Settings.StopAfterCu
                 C.StopOnceRelicFinished = relicStop;
                 C.Save();
             }
+
+            #endregion
+
+            #region Relic Level
+
+            bool stopWhen = C.StopAtRelicLv;
+            if (ImGui.Checkbox("Stop At Relic Lv.", ref stopWhen))
+            {
+                C.StopAtRelicLv = stopWhen;
+                C.Save();
+            }
+            ImGui.SameLine();
+            int relicLv = C.RelicLv;
+            ImGui.SetNextItemWidth(150);
+            if (ImGui.SliderInt("##RelicLvSlider", ref relicLv, 1, 20))
+            {
+                C.RelicLv = relicLv;
+                C.SaveDebounced();
+            }
+
+            #endregion
+
+            #region Mastery Score
+
+            bool stopMastery = C.StopWhenMasteryComplete;
+            if (ImGui.Checkbox("Stop When Mastery Complete", ref stopMastery))
+            {
+                C.StopWhenMasteryComplete = stopMastery;
+                C.SaveDebounced();
+            }
+            ImGui.SameLine();
+            int masteryScore = C.MasteryCap;
+            ImGui.SetNextItemWidth(150);
+            if (ImGui.SliderInt("##MasteryCapSlider", ref masteryScore, 0, 500_000))
+            {
+                C.MasteryCap = masteryScore;
+                C.SaveDebounced();
+            }
+
+
+            #endregion
+
+            #region Standard Missions Golded
+
+            bool standardGoldStop = C.StopOnceStandardMissionsGolded;
+            if (ImGui.Checkbox("Stop when all standard missions are golded", ref standardGoldStop))
+            {
+                C.StopOnceStandardMissionsGolded = standardGoldStop;
+                C.Save();
+            }
+            ImGuiEx.HelpMarker(
+                "Stops when every non-provisional, non-critical mission for your selected job on the current moon is gold.\n" +
+                "Timed, weather, sequence, and red alert missions are not counted.");
 
             #endregion
 

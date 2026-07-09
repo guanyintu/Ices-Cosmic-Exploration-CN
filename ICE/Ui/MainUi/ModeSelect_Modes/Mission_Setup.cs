@@ -46,9 +46,10 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
             { "Pictomancer", 42 }
         };
 
-        public static Mission_Table? MissionTable;
+        public static CosmicTables.Mission_Table? MissionTable;
         private static List<CosmicHelper.MissionInfo> TableItems = [];
         private static int ItemCount = 0;
+        private static string newListName = string.Empty;
 
         public static void Draw()
         {
@@ -125,7 +126,8 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                              | C.StopWhenLevel
                             || C.StopOnceHitCosmoCredits
                             || C.StopOnceHitLunarCredits
-                            || C.StopOnceRelicFinished;
+                            || C.StopOnceRelicFinished
+                            || C.StopOnceStandardMissionsGolded;
                 if (AnyStop)
                 {
                     ImGui.SameLine(0, 10 * scale);
@@ -146,6 +148,8 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             ImGui.BulletText($"Stop once planetary credit hit [{C.LunarCreditsCap:N0}]");
                         if (C.StopOnceRelicFinished)
                             ImGui.BulletText($"Stop once relic completed");
+                        if (C.StopOnceStandardMissionsGolded)
+                            ImGui.BulletText("Stop when all standard missions are golded");
 
                         ImGui.Text(T("So if you stop and you're unsure why... this might be why"));
 
@@ -157,7 +161,7 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                 ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
 
                 bool unsupportedArtisan = false; // xpLeveling && CosmicHelper.CrafterJobList.Contains((uint)Player.Job);
-                bool unsupportedMoon = xpLeveling
+                bool unsupportedMoon = xpLeveling 
                     && CosmicMoonRegistry.TryGetMoon(Player.Territory.RowId, out var currentMoon)
                     && !CosmicMoonRegistry.HasLevelingContent(currentMoon);
 
@@ -199,6 +203,20 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                             missing.Add("gathering routes");
                         if (missing.Count > 0)
                             ImGui.Text($"Still needed: {string.Join(", ", missing)}.");
+                        ImGui.EndTooltip();
+                    }
+                }
+                if (!P.AutoHook.UpdatedPlugin() && CosmicMoonRegistry.Auxesia.TerritoryId == Player.Territory.RowId)
+                {
+                    ImGui.SameLine(0, 10 * scale);
+                    ImGui.SetCursorPosY(ImGui.GetCursorPosY() + yOffset);
+                    ImGuiEx.Icon(EColor.Red, FontAwesomeIcon.ExclamationTriangle);
+                    if (ImGui.IsItemHovered())
+                    {
+                        ImGui.BeginTooltip();
+                        ImGui.Text($"Hey! Your version of autohook is not currently supported on this planet");
+                        ImGui.Text($"You need to (currently) be on the testing version to be able fish automated here");
+                        ImGui.Text($"There will be another warning to pop up if you try and run this still and it selects a fishing mission...");
                         ImGui.EndTooltip();
                     }
                 }
@@ -303,8 +321,121 @@ namespace ICE.Ui.MainUi.ModeSelect_Modes
                         C.SelectedTab = WindowSelection.CharacterSettings;
                     }
 
+                    if (ImGui.Button("Save Current Mission Preset"))
+                    {
+                        ImGui.OpenPopup("Preset Save Editor");
+                    }
 
-                    ImGui.EndPopup();
+                    if (ImGui.BeginPopup("Preset Save Editor"))
+                    {
+                        ImGui.InputText($"Playlist Name", ref newListName);
+                        using (ImRaii.Disabled(string.IsNullOrEmpty(newListName)))
+                        {
+                            if (ImGui.Button("Save New List"))
+                            {
+                                List<uint> new_Playlist = new();
+                                foreach (var mission in C.MissionConfig.Where(x => x.Value.Enabled))
+                                {
+                                    new_Playlist.Add(mission.Key);
+                                }
+                                if (C.Mission_Playlist.ContainsKey(newListName))
+                                {
+                                    C.Mission_Playlist[newListName] = new_Playlist;
+                                }
+                                else
+                                {
+                                    C.Mission_Playlist.Add(newListName, new_Playlist);
+                                }
+                                C.Save();
+                                ImGui.CloseCurrentPopup();
+                            }
+                        }
+
+                        ImGui.EndPopup();
+                    }
+
+                    if (C.Mission_Playlist.Count > 0)
+                    {
+                        if (ImGui.Button("View All Presets"))
+                        {
+                            ImGui.OpenPopup("Preset: List Viewer");
+                        }
+
+                        if (ImGui.BeginPopup("Preset: List Viewer"))
+                        {
+                            ImGui.Text($"Load Mission Preset");
+
+                            if (ImGui.BeginTable($"Preset: TableViewer", 3, ImGuiTableFlags.SizingFixedFit | ImGuiTableFlags.RowBg | ImGuiTableFlags.Borders))
+                            {
+                                ImGui.TableSetupColumn("Name");
+                                ImGui.TableSetupColumn("Amount Enabled");
+
+                                ImGui.TableHeadersRow();
+
+                                ImGui.TableNextRow();
+                                ImGui.TableSetColumnIndex(0);
+                                ImGui.AlignTextToFramePadding();
+                                ImGui.Text($"Clear All");
+                                ImGui.SameLine();
+                                if (ImGuiEx.IconButton(FontAwesomeIcon.ArrowUpRightFromSquare, $"FreshPreset_Button"))
+                                {
+                                    foreach (var mission in C.MissionConfig)
+                                    {
+                                        mission.Value.Enabled = false;
+                                    }
+                                    C.Save();
+                                    ImGui.CloseCurrentPopup();
+                                }
+
+                                foreach (var item in C.Mission_Playlist)
+                                {
+                                    ImGui.TableNextRow();
+                                    ImGui.TableSetColumnIndex(0);
+                                    ImGui.AlignTextToFramePadding();
+                                    ImGui.Text($"{item.Key}");
+                                    ImGui.SameLine();
+                                    if (ImGuiEx.IconButton(FontAwesomeIcon.ArrowUpRightFromSquare, $"{item.Key}_Button"))
+                                    {
+                                        foreach (var mission in C.MissionConfig)
+                                        {
+                                            if (item.Value.Contains(mission.Key))
+                                                mission.Value.Enabled = true;
+                                            else
+                                                mission.Value.Enabled = false;
+                                        }
+                                        C.Save();
+                                        ImGui.CloseCurrentPopup();
+                                    }
+                                    if (ImGui.IsItemHovered())
+                                    {
+                                        ImGui.SetTooltip("Import Missions");
+                                    }
+
+                                    ImGui.TableNextColumn();
+                                    ImGui.AlignTextToFramePadding();
+                                    ImGui.Text($"{item.Value.Count}");
+
+                                    ImGui.TableNextColumn();
+                                    if (ImGuiEx.IconButton(FontAwesomeIcon.Trash, $"{item.Key}_Remove"))
+                                    {
+                                        C.Mission_Playlist.Remove(item);
+                                        C.Save();
+                                    }
+                                    if (ImGui.IsItemHovered())
+                                    {
+                                        ImGui.SetTooltip("Remove from list");
+                                    }
+                                }
+
+                                ImGui.EndTable();
+                            }
+
+                            ImGui.EndPopup();
+                        }
+                    }
+
+
+                ImGui.EndPopup();
                 }
             }
 

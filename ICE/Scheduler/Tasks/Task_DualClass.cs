@@ -2,7 +2,7 @@
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
 using FFXIVClientStructs.FFXIV.Component.GUI;
-using ICE.Ui.DebugWindowTabs;
+using ICE.Ui.Debug_Tabs.Debug_Ui;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
@@ -370,7 +370,7 @@ namespace ICE.Scheduler.Tasks
                 _fishingDebug = new FishingDebug();
             }
 
-            if (CosmicHelper.CurrentBait == 0)
+            if (CosmicHelper.CurrentBait() == 0)
             {
                 if (EzThrottler.Throttle("Equipping bait"))
                 {
@@ -420,17 +420,14 @@ namespace ICE.Scheduler.Tasks
                 else if (EzThrottler.Throttle("Starting to fish", 1000))
                 {
                     IceLogging.Debug("Telling it to start fishing", handle);
-                    // CN-MAINT: Reuse unified fishing start policy (AutoHook/MissFisher/conflict handling).
-                    Task_Fishing.StartFishingByAvailablePlugin(handle);
+                    ActionManager.Instance()->UseAction(ActionType.Action, 289);
                 }
                 return false;
             }
             else
             {
                 // Means we are fishing, all we need to do is enable autohook then wait for us to get the amount of fish we need
-                // CN-MAINT: AutoHook runtime state is enabled only in exclusive AutoHook mode.
-                if (Task_Fishing.ShouldEnableAutoHookRuntime())
-                    P.AutoHook.SetPluginState(true);
+                P.AutoHook.Ah_State(true);
                 IceLogging.Info("We're starting to fish. So kicking it over to checking the fish items", handle);
                 P.TaskManager.Insert(() => CheckItems(), "Checking for items to meet the quantity set", Utils.TaskConfig);
                 return true;

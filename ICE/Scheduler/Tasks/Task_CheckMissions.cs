@@ -56,6 +56,9 @@ namespace ICE.Scheduler.Tasks
         }
         private static void ReOpenMissionUi(string tag)
         {
+            if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var missionUi) && missionUi.IsAddonReady)
+                return;
+
             if (GenericHelpers.TryGetAddonMaster<WKSHud>("WKSHud", out var moonHud) && moonHud.IsAddonReady)
             {
                 if (EzThrottler.Throttle("Opening the mission ui"))
@@ -64,6 +67,59 @@ namespace ICE.Scheduler.Tasks
                     moonHud.Mission();
                 }
             }
+        }
+
+        private static readonly MissionKind[] HuntSpecialMissionKinds =
+            [MissionKind.Critical, MissionKind.Weather, MissionKind.Timed, MissionKind.Sequence];
+
+        private static readonly MissionKind[] StandardMissionKinds =
+            [MissionKind.Ex, MissionKind.A, MissionKind.B, MissionKind.C, MissionKind.D];
+
+        private static int EnabledStandardMissionCount()
+        {
+            var count = 0;
+            foreach (var rank in StandardMissionKinds)
+                count += MissionLibrary[rank].Count;
+            return count;
+        }
+
+        /// <summary>
+        /// Gold completion grind only: idle-wait when special missions remain ungolded,
+        /// none are on the board, and there are no standard missions left to reroll for.
+        /// </summary>
+        private static bool WaitingForSpecialMissions() =>
+            Mission_Settings.Mode == ModeSelect.MissionGoldMode
+            && HuntSpecialMissionKinds.Any(kind => MissionLibrary[kind].Count > 0)
+            && EnabledStandardMissionCount() == 0;
+
+        private static void EnterWaitForSpecialMissions(string tag)
+        {
+            if (SchedulerMain.State != IceState.Waiting)
+            {
+                IceLogging.Info("Gold completion grind: waiting for a timed, weather, or critical mission to appear on the board.", tag);
+                SchedulerMain.State = IceState.Waiting;
+            }
+
+            CosmicHandler.EnsureStandardMissionTab(Mission_Settings.SelectedJob);
+            P.TaskManager.Tasks.Clear();
+        }
+
+        public static void EnqueueWaitRecheck()
+        {
+            P.TaskManager.Enqueue(() => WaitForSpecialMissionRecheck(), "Waiting for special mission availability");
+        }
+
+        private static bool? WaitForSpecialMissionRecheck()
+        {
+            string tag = "[Check Missions: Wait for Special]";
+
+            if (!EzThrottler.Throttle("Recheck special missions", 15_000))
+                return false;
+
+            CosmicHandler.EnsureStandardMissionTab(Mission_Settings.SelectedJob);
+            IceLogging.Verbose("Rechecking mission board for timed/weather/critical missions", tag);
+            SchedulerMain.State = IceState.GrabMission;
+            return true;
         }
         private static MissionKind LibraryInfo(KeyValuePair<uint, CosmicHelper.CosmicInfo> mission)
         {
@@ -79,11 +135,12 @@ namespace ICE.Scheduler.Tasks
                 entry = MissionKind.Sequence;
             else if (attribute.HasFlag(MissionAttributes.Critical))
                 entry = MissionKind.Critical;
+            else if (mission.Value.IsMaster)
+                entry = MissionKind.Master;
             else if (rank != 0)
             {
                 entry = rank switch
                 {
-                    6 => MissionKind.Master, // Rank 6 non-provisional = Tool Mastery (separate in-game tab)
                     5 => MissionKind.Ex,
                     4 => MissionKind.A,
                     3 => MissionKind.B,
@@ -315,15 +372,24 @@ namespace ICE.Scheduler.Tasks
                 return false;
             }
 
+            if (CosmicHandler.CanQueryMissionsWithoutUi())
+            {
+                CosmicHandler.EnsureStandardMissionTab(Mission_Settings.SelectedJob);
+
+                if (WaitingForSpecialMissions())
+                {
+                    IceLogging.Verbose("Mission agent is active — reading the board without opening WKSMission UI", tag);
+                    return true;
+                }
+            }
+
             if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var hud) && hud.IsAddonReady)
             {
                 IceLogging.Info("The Mission Selection Ui is visible! Continuing on", tag);
                 return true;
             }
-            else
-            {
-                ReOpenMissionUi(tag);
-            }
+
+            ReOpenMissionUi(tag);
 
             return false;
         }
@@ -332,7 +398,8 @@ namespace ICE.Scheduler.Tasks
             string tag = "Check Missions: Check Tabs";
             var priority = C.MissionTypePrio;
 
-            if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var x) && x.IsAddonReady)
+            if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var x) && x.IsAddonReady
+                || CosmicHandler.CanQueryMissionsWithoutUi())
             {
                 foreach (var type in C.MissionTypePrio)
                 {
@@ -437,6 +504,14 @@ namespace ICE.Scheduler.Tasks
                             }
                             break;
                         }
+                        case MissionTypes.ToolMastery:
+                        {
+                            if (MissionLibrary[MissionKind.Master].Count > 0)
+                            {
+                                P.TaskManager.Enqueue(() => CheckMissions(MissionLibrary[MissionKind.Master], type), "Checking for master missions");
+                            }
+                            break;
+                        }
                     }
                 }
 
@@ -473,11 +548,13 @@ namespace ICE.Scheduler.Tasks
                     $"Provisional: {provisional}", tag);
             }
 
-            if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var missionInfo) && missionInfo.IsAddonReady)
+            if (CosmicHandler.CanQueryMissionsWithoutUi()
+                || (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var missionInfo) && missionInfo.IsAddonReady))
             {
                 var basicMissionList = CosmicHandler.Basic_AvailableMissions();
                 var specialMissionList = CosmicHandler.Provisional_AvailableMissions();
                 var criticalMissions = CosmicHandler.Critical_AvailableMissions();
+                var masteryMissions = CosmicHandler.Mastery_AvailableMissions();
                 var mode = Mission_Settings.Mode;
 
                 var job = Goldjob != 0 ? Goldjob : Mission_Settings.SelectedJob;
@@ -487,30 +564,7 @@ namespace ICE.Scheduler.Tasks
 
                 if (CorrectJobTab(job, categoryTab))
                 {
-                    if (type is MissionTypes.ToolMastery)
-                    {
-                        // Tool Mastery has no tab-independent getter, so we must be on its UI tab to read
-                        // the list. Click into it first; bail this cycle until the UI is actually there.
-                        if (!CosmicHandler.EnsureCategoryTab(CosmicHandler.ToolMasteryTab))
-                            return true;
-
-                        var masterAvail = CosmicHandler.ToolMastery_AvailableMissions();
-                        IceLogging.Verbose($"Checking Tool Mastery missions.\n" +
-                            $"Loaded mission Count: {missionList.Count()}\n" +
-                            $"Available on tab: {masterAvail.Count()}", tag);
-
-                        foreach (var missionId in missionList)
-                        {
-                            if (masterAvail.Contains(missionId))
-                            {
-                                LogInfo(missionId);
-                                Insert_GrabMissionTask(missionId);
-                                return true;
-                            }
-                        }
-                        return true;
-                    }
-                    else if (mode == ModeSelect.LevelMode)
+                    if (mode == ModeSelect.LevelMode)
                     {
                         var levelingMission = missionList.FirstOrDefault();
                         IceLogging.Verbose($"Leveling Mission: Job: {Mission_Settings.SelectedJob} | Mission: {levelingMission} | Level: {CosmicHelper.SheetMissionDict[levelingMission].Level}", debugOnly: true);
@@ -818,6 +872,24 @@ namespace ICE.Scheduler.Tasks
                             IceLogging.Info("No missions were found for the critical missions, so continuing on", tag);
                             return true;
                         }
+                        else if (type is MissionTypes.ToolMastery)
+                        {
+                            IceLogging.Verbose($"Checking missions for the following mode:\n" +
+                                $"Mode: {type}\n" +
+                                $"Loaded mission count: {missionList.Count()}\n" +
+                                $"Amount of available missions: {masteryMissions.Count()}", tag);
+
+                            foreach (var missionId in missionList)
+                            {
+                                if (masteryMissions.Contains(missionId))
+                                {
+                                    LogInfo(missionId);
+                                    Insert_GrabMissionTask(missionId);
+                                    return true;
+                                }
+                            }
+                            return true;
+                        }
                     }
                     else
                     {
@@ -881,9 +953,9 @@ namespace ICE.Scheduler.Tasks
             var sheetInfo = CosmicHelper.SheetMissionDict[missionId];
             var missionConfig = C.MissionConfig[missionId];
 
-            IceLogging.Info($"[MoveCheck] id={missionId} attrs=[{sheetInfo.Attributes}] gather={sheetInfo.IsGatherMission} fish={sheetInfo.IsFishMission} gr={sheetInfo.IsGreaterReach} unsupported={UnsupportedMissions.Ids.Contains(missionId)} manual={missionConfig.ManualMode} mapPos=({sheetInfo.MapPosition.X},{sheetInfo.MapPosition.Y})", tag);
+            IceLogging.Info($"[MoveCheck] id={missionId} attrs=[{sheetInfo.Attributes}] gather={sheetInfo.IsGatherMission} fish={sheetInfo.IsFishMission} unsupported={UnsupportedMissions.Ids.Contains(missionId)} mapPos=({sheetInfo.MapPosition.X},{sheetInfo.MapPosition.Y})", tag);
 
-            if (missionConfig.ManualMode || UnsupportedMissions.Ids.Contains(missionId))
+            if (UnsupportedMissions.Ids.Contains(missionId))
             {
                 IceLogging.Info("Mission is currently in manual mode, or not supported. So not going to pathfind to it.", tag);
                 return true;
@@ -893,7 +965,7 @@ namespace ICE.Scheduler.Tasks
                 IceLogging.Error("HEY. YOU DIDN'T READ THE HELP ME PAGE. AND NOW YOU'RE MISSING NAVMESH. So... yeah... if things break this is why");
                 return true;
             }
-            else if (sheetInfo.IsGatherMission || sheetInfo.IsGreaterReach)
+            else if (sheetInfo.IsGatherMission)
             {
                 var route = sheetInfo.Gather_MapKey;
 
@@ -919,7 +991,9 @@ namespace ICE.Scheduler.Tasks
                     }
 
                     IceLogging.Verbose("If we've gotten this far, that means we need to figure out a path to go to the node. Doing so now", tag);
-                    Task_NavmeshMove.Enqueue_NavmeshTask(startNode.LandZone);
+                    var randomPosition = Task_NavmeshMove.Gather_RandomFanPosition(startNode);
+                    Task_NavmeshMove.Enqueue_NavmeshTask(randomPosition);
+
                     return true;
                 }
             }
@@ -1060,10 +1134,6 @@ namespace ICE.Scheduler.Tasks
 
                     if (CorrectJobTab(job, categoryTab))
                     {
-                        // Tool Mastery missions are only readable/grabbable from their own UI tab.
-                        if (categoryTab == CosmicHandler.ToolMasteryTab && !CosmicHandler.EnsureCategoryTab(CosmicHandler.ToolMasteryTab))
-                            return false;
-
                         IceLogging.Verbose("On the correct tab, we're going to see the total mission count", tag);
                         var allmissions = CosmicHandler.All_AvailableMissions();
                         IceLogging.Verbose($"All mission count: {allmissions.Count()} | Goal: {missionId}");
@@ -1076,7 +1146,7 @@ namespace ICE.Scheduler.Tasks
 
                         if (allmissions.Contains(missionId))
                         {
-                            if (EzThrottler.Throttle("Selecting Mission"))
+                            if (EzThrottler.Throttle("Selecting Mission", 1000))
                                 InitiateMission(missionId);
                         }
                         else
@@ -1116,6 +1186,12 @@ namespace ICE.Scheduler.Tasks
         private static bool? FindReroll()
         {
             string tag = "[Check Missions: Find Reroll]";
+
+            if (WaitingForSpecialMissions())
+            {
+                EnterWaitForSpecialMissions(tag);
+                return true;
+            }
 
             if (GenericHelpers.TryGetAddonMaster<WKSMission>("WKSMission", out var missionInfo) && missionInfo.IsAddonReady)
             {

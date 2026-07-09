@@ -26,10 +26,15 @@ internal static unsafe class PlayerHandlers
         if (!P.overlayWindow.IsOpen && PlayerHelper.IsInCosmicZone() && C.ShowOverlay)
             P.overlayWindow.IsOpen = true;
 
-        if (C.MoonSprint && PlayerHelper.IsInCosmicZone()
-         && !PlayerHelper.HasStatusId(stellarSprintID) && Svc.Condition[ConditionFlag.NormalConditions]
-         && IsMoving() && PlayerHelper.UsingSupportedJob())
+        if (C.MoonSprint 
+            && PlayerHelper.IsInCosmicZone()
+            && !PlayerHelper.HasStatusId(stellarSprintID) 
+            && Svc.Condition[ConditionFlag.NormalConditions]
+            && IsMoving() 
+            && PlayerHelper.UsingSupportedJob())
+        {
             UseSprint();
+        }
 
         if ((!PlayerHelper.IsInCosmicZone()) && SchedulerMain.State != IceState.Idle)
         {
@@ -44,9 +49,12 @@ internal static unsafe class PlayerHandlers
 
         if (GenericHelpers.TryGetAddonByName<AtkUnitBase>("WKSReward", out var addon) && GenericHelpers.IsAddonReady(addon))
         {
-            if (EzThrottler.Throttle("Closing the reward popup"))
+            if (C.HideRewardWindow)
             {
-                GenericHandlers.FireCallback("WKSReward", true, -1);
+                if (EzThrottler.Throttle("Closing the reward popup"))
+                {
+                    GenericHandlers.FireCallback("WKSReward", true, -1);
+                }
             }
         }
 

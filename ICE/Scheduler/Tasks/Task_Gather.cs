@@ -2,14 +2,16 @@
 using Dalamud.Game.ClientState.Objects.Enums;
 using ECommons.GameHelpers;
 using FFXIVClientStructs.FFXIV.Client.Game;
+using FFXIVClientStructs.FFXIV.Client.UI.Agent;
 using FFXIVClientStructs.FFXIV.Component.GUI;
 using ICE.Utilities.Cosmic_Helper;
 using ICE.Utilities.GatheringHelper;
+using ICE.Utilities.GatheringHelper.RouteLoader;
 using System.Collections.Generic;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
 using static ICE.ConfigFiles.Config;
+using static ICE.Ui.MainUi.Settings.GatherSettings;
 using MissionRank = FFXIVClientStructs.FFXIV.Client.Game.WKS.WKSMissionModule.MissionRank;
-using ICE.Utilities.GatheringHelper.RouteLoader;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -25,6 +27,19 @@ namespace ICE.Scheduler.Tasks
                 IceLogging.Debug("Current in a gathering session");
                 Task_CheckScore.Enqueue();
                 P.TaskManager.Enqueue(() => GatherInteractV2(), "Interacting with gathering menu", Utils.TaskConfig);
+            }
+            else if (C.Gather_NoNav)
+            {
+                P.TaskManager.EnqueueDelay(200);
+                if (CosmicHelper.SheetMissionDict[CosmicHelper.CurrentLunarMission].Attributes.HasFlag(MissionAttributes.ReducedItems))
+                {
+                    Task_CheckScore.Enqueue();
+                    P.TaskManager.Enqueue(() => CheckReduceMission(), "Checking to see if we need to reduce items");
+                    P.TaskManager.EnqueueDelay(500);
+                    Task_CheckScore.Enqueue();
+                }
+                P.TaskManager.Enqueue(() => Mission_Settings.ResetCollectableState());
+                P.TaskManager.Enqueue(() => UseFood());
             }
             else
             {
@@ -55,11 +70,6 @@ namespace ICE.Scheduler.Tasks
         {
             string tag = "Gather: Gather Interacting";
 
-            var missionInfo = CosmicHelper.CurrentMissionInfo;
-            bool collectableItem = missionInfo.Attributes.HasFlag(MissionAttributes.Collectables);
-            bool reduceItems = missionInfo.Attributes.HasFlag(MissionAttributes.ReducedItems);
-            bool ScoreMode = missionInfo.IsMaster && C.MissionConfig[CosmicHelper.CurrentLunarMission].TurninGoal == TurninState.TimeExpired;
-
             bool CheckDelay()
             {
                 if (C.Delay_Gather)
@@ -88,6 +98,10 @@ namespace ICE.Scheduler.Tasks
                 }
             }
 
+            var missionInfo = CosmicHelper.CurrentMissionInfo;
+            bool collectableItem = missionInfo.Attributes.HasFlag(MissionAttributes.Collectables);
+            bool reduceItems = missionInfo.Attributes.HasFlag(MissionAttributes.ReducedItems);
+
             if (Svc.Condition[ConditionFlag.Gathering])
             {
                 // We should always have this condition up while we're gathering. Even if a revisit happens
@@ -98,10 +112,10 @@ namespace ICE.Scheduler.Tasks
                     {
                         if (EzThrottler.Throttle("Log message"))
                         {
-                            IceLogging.Debug($"Collectable: {collectableItem} | Reduce: {reduceItems} | Score Mode: {ScoreMode}");
+                            IceLogging.Debug($"Collectable: {collectableItem} | Reduce: {reduceItems}");
                         }
 
-                        if (reduceItems || collectableItem)
+                        if (reduceItems || (collectableItem))
                         {
                             // We need to find an item where it's a collectable so we can just initiate the gathering window
                             var item = gather.GatheredItems.Where(x => x.IsCollectable).FirstOrDefault();
@@ -129,12 +143,9 @@ namespace ICE.Scheduler.Tasks
                             if (CheckDelay())
                                 return false;
 
-                            if (!ScoreMode)
+                            if (UseGatherAction(configId, gatherChance, boonChance, gather.CurrentIntegrity, gather.TotalIntegrity, playerGp))
                             {
-                                if (UseGatherAction(configId, gatherChance, boonChance, gather.CurrentIntegrity, gather.TotalIntegrity, playerGp))
-                                {
-                                    return false;
-                                }
+                                return false;
                             }
 
                             // Find the item with the largest deficit
@@ -162,15 +173,11 @@ namespace ICE.Scheduler.Tasks
                             }
                             else
                             {
-                                // we must not need any of those items, so going to just do a first item gather
-                                if (!ScoreMode)
-                                    gather.GatheredItems
-                                        .Where(x => x.ItemID != 0)
-                                        .Where(x => !x.IsCollectable)
-                                        .FirstOrDefault()
-                                        .Gather();
-                                else
-                                    gather.GatheredItems.Where(x => x.ItemID != 0).FirstOrDefault().Gather();
+                                gather.GatheredItems
+                                    .Where(x => x.ItemID != 0)
+                                    .Where(x => !x.IsCollectable)
+                                    .FirstOrDefault()
+                                    .Gather();
                                 return false;
                             }
                         }
@@ -199,6 +206,8 @@ namespace ICE.Scheduler.Tasks
             }
             else
             {
+                GreaterReachCount = 0;
+                HadGreaterReach = false;
                 GatherDelayThrottle = 0;
                 return true;
             }
@@ -213,6 +222,9 @@ namespace ICE.Scheduler.Tasks
             var collect_highGrade = collectable.HighCollectability;
             var playerGp = PlayerHelper.GetGp();
             bool missingDur = integrity < collectable.TotalIntegrity;
+
+            var config = C.MissionConfig[CosmicHelper.CurrentLunarMission];
+            var isMaster = CosmicHelper.CurrentMissionInfo.IsMaster;
 
             // Track collectability progress to detect stuck rotations
             if (collect_Current != _lastCollectability)
@@ -231,7 +243,7 @@ namespace ICE.Scheduler.Tasks
                 {
                     var currentCharge = GatheringUtil.CollectStandardCharges();
 
-                    if (currentCharge != 0 && currentCharge >= Mission_Settings.Collectable_BuffCount)
+                    if (currentCharge != 0 && (currentCharge >= Mission_Settings.Collectable_BuffCount || (config.TurninGoal == TurninState.Gold && isMaster)))
                     {
                         ActionManager.Instance()->UseAction(ActionType.GeneralAction, 27);
                     }
@@ -276,12 +288,13 @@ namespace ICE.Scheduler.Tasks
                 _lastCollectProgress = DateTime.MinValue;
 
                 // if we've gotten this far, that means we're in a state that we should just be collecting
-                if (integrity < collectable.TotalIntegrity && CanUseCollectableAction("BonusIntegrityChance", missingDur))
+                if (collectable.CurrentIntegrity == 1 && CanUseCollectableAction("BonusIntegrityChance", missingDur))
                 {
                     if (EzThrottler.Throttle("Integrity bonus"))
                         UseCollectableAction("BonusIntegrityChance");
                 }
-                else if (CanUseCollectableAction("BonusIntegrity", missingDur))
+
+                else if (CanUseCollectableAction("BonusIntegrity", collectable.CurrentIntegrity == 1))
                 {
                     if (EzThrottler.Throttle("Integrity bonus"))
                         UseCollectableAction("BonusIntegrity");
@@ -292,9 +305,6 @@ namespace ICE.Scheduler.Tasks
                 }
             }
         }
-
-        // Old Gathering system here
-
         public static bool? CheckCurrentLocation()
         {
             ThrottleMessage("- - - Check Gather Locations Task - - -", "[Check Gather Locations]");
@@ -414,7 +424,6 @@ namespace ICE.Scheduler.Tasks
             }
         }
         private const float SmartRoutingThreshold = 50f;
-
         public static bool? PathandCheckNode()
         {
             var zoneId = Player.Territory;
@@ -437,6 +446,7 @@ namespace ICE.Scheduler.Tasks
             }
             else
             {
+                Task_NavmeshMove.ResetGatherMove();
                 var rank = Task_CheckScore.CurrentRank();
 
 
@@ -452,10 +462,14 @@ namespace ICE.Scheduler.Tasks
                     IceLogging.Info($"Gathering window is now visible, continuing onto GatheringInteraction Task", "[Gathering: OpenGatheringMenu]");
                     P.TaskManager.Insert(() => GatherInteractV2(), "Gathering at the node", Utils.TaskConfig);
                     Mission_Settings.nodeTotal += 1;
+                    GreaterReachCount = 0;
                     return true;
                 }
                 else
                 {
+                    if (UseCordial())
+                        return false;
+
                     Utils.TryGetObjectByDataId(location.NodeId, out var node);
                     if (node != null && !Player.IsJumping)
                     {
@@ -480,6 +494,9 @@ namespace ICE.Scheduler.Tasks
 
             return false;
         }
+
+        public static uint GreaterReachCount = 0;
+        public static bool HadGreaterReach = false;
         public static unsafe bool UseGatherAction(int profileId, int gatherChance, int? boonChance, int currentDur, int maxDur, int availableGp)
         {
             C.GatherProfiles.TryGetValue(profileId, out var gatherProfile);
@@ -606,9 +623,21 @@ namespace ICE.Scheduler.Tasks
                 }
             }
 
+            if (HadGreaterReach)
+            {
+                GreaterReachCount += 1;
+                HadGreaterReach = false;
+            }
+
             if (PlayerHelper.HasStatusId(4437) && (currentDur == 1 || currentDur == maxDur - 4) && PlayerHelper.GetGp() != PlayerHelper.MaxGp())
             {
-                ActionManager.Instance()->UseAction(ActionType.GeneralAction, 27);
+                HadGreaterReach = true;
+
+                if (EzThrottler.Throttle("Log Message for Collectable Action"))
+                    IceLogging.Verbose($"Checking for action usage: Greater Reach");
+
+                if (EzThrottler.Throttle("Using Greater Reach", 500))
+                    ActionManager.Instance()->UseAction(ActionType.GeneralAction, 27);
                 return true;
             }
 
@@ -623,7 +652,9 @@ namespace ICE.Scheduler.Tasks
                     {
                         uint jobId = (uint)Player.Job;
 
-                        IceLogging.Debug($"Using the following action: {action} on the node", debugOnly: true);
+                        IceLogging.Verbose($"Checking for action usage: {action}");
+
+
                         var actionId = GatheringUtil.GathActionDict[action].ClassAction[jobId];
                         ActionManager.Instance()->UseAction(ActionType.Action, actionId);
                         Mission_Settings.SkillUseAmount[action] += 1;
@@ -648,7 +679,7 @@ namespace ICE.Scheduler.Tasks
                 return hasStatus && currentDur == 1;
             }
 
-            var gatherBuff = C.GatherProfiles[profileId].GatherBuffs.Buffs[actionName];
+            var gatherBuff = GatherProfile(profileId).Buffs[actionName];
 
             return actionName switch
             {
@@ -697,6 +728,7 @@ namespace ICE.Scheduler.Tasks
                                     && PlayerHelper.GetGp() >= gatherBuff.MinGp
                                     && (gatherBuff.MaxUse == -1 || gatherBuff.MaxUse > used)
                                     && (maxDur >= gatherBuff.MinUsableDurability)
+                                    && (GreaterReachCount < 4)
                                     && properLvl,
                 "BountifulYieldII" => gatherBuff.Enabled
                                    && !hasStatus && !PlayerHelper.HasStatusId(actionInfo.StatusId2)
@@ -707,6 +739,83 @@ namespace ICE.Scheduler.Tasks
                 _ => false,
             };
         }
+
+        private static GatherBuffs GatherProfile(int profileId)
+        {
+            if (profileId != 0)
+            {
+                return C.GatherProfiles[profileId].GatherBuffs;
+            }
+            else
+            {
+
+
+                var currentMission = CosmicHelper.CurrentMissionInfo;
+                return GetDefaultProfileForMission(currentMission.Attributes);
+            }
+        }
+
+        private static GatherBuffs GetDefaultProfileForMission(MissionAttributes attrs)
+        {
+            var buffs = new GatherBuffs();
+
+            if (attrs.HasFlag(MissionAttributes.GreaterReach_Boon_Chain))
+            {
+                buffs.Buffs["BoonIncrease2"].Enabled = true;
+                buffs.Buffs["BoonIncrease1"].Enabled = true;
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.GreaterReach_Boon))
+            {
+                buffs.Buffs["BoonIncrease2"].Enabled = true;
+                buffs.Buffs["BoonIncrease1"].Enabled = true;
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.GreaterReach_Chain))
+            {
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.GreaterReach_GatherX))
+            {
+                buffs.Buffs["YieldII"].Enabled = true;
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.Score_GatherX))
+            {
+                buffs.Buffs["YieldII"].Enabled = true;
+                buffs.Buffs["BountifulYieldII"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.Gather) && attrs.HasFlag(MissionAttributes.Craft))
+            {
+                buffs.Buffs["BoonIncrease2"].Enabled = true;
+                buffs.Buffs["BoonIncrease1"].Enabled = true;
+                buffs.Buffs["YieldII"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.Score_Boon) && attrs.HasFlag(MissionAttributes.Score_Chain))
+            {
+                buffs.Buffs["BoonIncrease2"].Enabled = true;
+                buffs.Buffs["BoonIncrease1"].Enabled = true;
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.Score_Boon))
+            {
+                buffs.Buffs["BoonIncrease2"].Enabled = true;
+                buffs.Buffs["BoonIncrease1"].Enabled = true;
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else if (attrs.HasFlag(MissionAttributes.Score_Chain))
+            {
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+            }
+            else
+            {
+                buffs.Buffs["BonusIntegrity"].Enabled = true;
+                buffs.Buffs["YieldII"].Enabled = true;
+            }
+
+            return buffs;
+        }
+
         private static bool CanUseCollectableAction(string action, bool missingDur = false)
         {
             var actionInfo = GatheringUtil.GathCollectableBuffs[action];
@@ -737,8 +846,11 @@ namespace ICE.Scheduler.Tasks
             var jobId = (uint)Player.Job;
 
             var actionId = collectorBuffs[action].ClassAction[jobId];
-            if (EzThrottler.Throttle("Using Action Buff", 100))
+            if (EzThrottler.Throttle("Log Message for Collectable Action"))
+                IceLogging.Verbose($"Checking for action usage: {actionId} | {action}");
+            if (EzThrottler.Throttle("Using Action Buff", 500))
             {
+                IceLogging.Verbose($"Attempting to use collectable buff: [{actionId}] {action}");
                 ActionManager.Instance()->UseAction(ActionType.Action, actionId);
             }
         }
@@ -748,7 +860,14 @@ namespace ICE.Scheduler.Tasks
             var jobId = (uint)Player.Job;
 
             var actionId = collectorAction[action].ClassAction[jobId];
-            ActionManager.Instance()->UseAction(ActionType.Action, actionId);
+            if (EzThrottler.Throttle("Log Message for Collectable Action"))
+                IceLogging.Verbose($"Checking for action usage: {actionId} | {action}");
+
+            if (EzThrottler.Throttle("Using Action Buff", 100))
+            {
+                IceLogging.Verbose($"Attempting to use collectable action: [{actionId}] {action}");
+                ActionManager.Instance()->UseAction(ActionType.Action, actionId);
+            }
         }
         public static bool? CheckReduceMission()
         {
@@ -847,63 +966,91 @@ namespace ICE.Scheduler.Tasks
                 return (int)info.Rank;
             return 0;
         }
-        public static unsafe void UseCordial()
+        public static unsafe bool UseCordial()
         {
             string tag = "Cordial Check";
 
-            if (EzThrottler.Throttle("Cordial Usage Check Throttle"))
+            if (!PlayerHelper.CustomIsBusy)
             {
-                if (!PlayerHelper.CustomIsBusy)
+                IceLogging.Debug("Cordial Checkers", tag);
+                if (C.AutoCordial)
                 {
-                    IceLogging.Debug("Cordial Checkers", tag);
-                    if (C.AutoCordial)
+                    if (C.CordialMinRank > 0 && GetCurrentMissionRank() < C.CordialMinRank)
                     {
-                        if (C.CordialMinRank > 0 && GetCurrentMissionRank() < C.CordialMinRank)
-                        {
-                            IceLogging.Debug($"Skipping cordial: mission rank {GetCurrentMissionRank()} below threshold {C.CordialMinRank}", tag);
-                            return;
-                        }
-                        IceLogging.Debug($"Min GP: {PlayerHelper.GetGp()} <= {C.CordialMinGp}", tag);
+                        IceLogging.Debug($"Skipping cordial: mission rank {GetCurrentMissionRank()} below threshold {C.CordialMinRank}", tag);
+                        return false;
+                    }
+                    IceLogging.Debug($"Min GP: {PlayerHelper.GetGp()} <= {C.CordialMinGp}", tag);
 
-                        if (PlayerHelper.GetGp() <= C.CordialMinGp)
+                    if (PlayerHelper.GetGp() <= C.CordialMinGp)
+                    {
+                        Dictionary<uint, (string Name, int GpGain)> cordials = new()
                         {
-                            Dictionary<uint, (string Name, int GpGain)> cordials = new()
-                        {
-                            { 12669,   ("Hi-Cordial",          400) },
-                            { 1006141, ("HQ Regular Cordial",  350) },
-                            { 6141,    ("NQ Regular Cordial",  300) },
-                            { 1016911, ("HQ Watered Cordial",  200) },
-                            { 16911,   ("NQ Watered Cordial",  150) }
+                            [12669] = ("Hi-Cordial", 400),
+                            [1006141] = ("HQ Regular Cordial", 350),
+                            [6141] = ("NQ Regular Cordial", 300),
+                            [1016911] = ("HQ Watered Cordial", 200),
+                            [16911] = ("NQ Watered Cordial", 150),
                         };
 
-                            foreach (var cordial in C.inverseCordialPrio ? cordials.Reverse() : cordials)
+                        foreach (var cordial in C.inverseCordialPrio ? cordials.Reverse() : cordials)
+                        {
+                            IceLogging.Verbose($"Checking Cordial: {cordial.Value.Name}", tag);
+                            bool hq = cordial.Key >= 1_000_000;
+                            uint baseId = hq ? cordial.Key - 1_000_000 : cordial.Key;
+
+                            if (PlayerHelper.GetItemCount(cordial.Key, out var amount, hq, !hq) && amount > 0)
                             {
-                                IceLogging.Verbose($"Checking Cordial: {cordial.Value.Name}", tag);
-                                bool hq = cordial.Key >= 1_000_000;
-                                if (PlayerHelper.GetItemCount(cordial.Key, out var amount, hq, !hq) && amount > 0)
+                                if (ActionManager.Instance()->GetActionStatus(ActionType.Item, 12669) == 0)
                                 {
-                                    IceLogging.Verbose($"We currently have more than 1 of {cordial.Value.Name}, so going to see if we can use it");
-                                    if (ActionManager.Instance()->GetActionStatus(ActionType.Item, cordial.Key) == 0)
+                                    if (!C.PreventOvercap || !WillOvercap(cordial.Value.GpGain))
                                     {
-                                        IceLogging.Verbose("Cooldown of cordial usage is 0, which means the action is available", tag);
-                                        if (!C.PreventOvercap || (C.PreventOvercap && !WillOvercap(cordial.Value.GpGain)))
+                                        // Find the actual inventory slot and use it directly
+                                        var inventoryManager = InventoryManager.Instance();
+                                        var inventoryTypes = new[] 
                                         {
-                                            IceLogging.Verbose($"We're using a cordial: ID: {cordial.Key} | Name: {cordial.Value.Name}", tag);
-                                            ActionManager.Instance()->UseAction(ActionType.Item, cordial.Key, extraParam: 65535);
-                                            break;
+                                            InventoryType.Inventory1, InventoryType.Inventory2,
+                                            InventoryType.Inventory3, InventoryType.Inventory4
+                                        };
+
+                                        foreach (var invType in inventoryTypes)
+                                        {
+                                            var container = inventoryManager->GetInventoryContainer(invType);
+                                            if (container == null) continue;
+
+                                            for (int i = 0; i < container->Size; i++)
+                                            {
+                                                var item = container->GetInventorySlot(i);
+                                                if (item == null) continue;
+                                                if (item->ItemId == baseId && (hq == false || item->Flags.HasFlag(InventoryItem.ItemFlags.HighQuality)))
+                                                {
+                                                    IceLogging.Verbose($"We're using a cordial: ID: {cordial.Key} | Name: {cordial.Value.Name}", tag);
+                                                    AgentInventoryContext.Instance()->UseItem(cordial.Key, invType, (uint)i, 0);
+                                                    return true;
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
                         }
                     }
-                    else
-                    {
-                        if (EzThrottler.Throttle("No Use Cordial"))
-                            IceLogging.Verbose("We don't have auto cordial enabled, continuing on", tag);
-                    }
+                }
+                else
+                {
+                    if (EzThrottler.Throttle("No Use Cordial"))
+                        IceLogging.Verbose("We don't have auto cordial enabled, continuing on", tag);
+
+                    return false;
                 }
             }
+            else
+            {
+                if (EzThrottler.Throttle("Cordial Busy"))
+                    IceLogging.Debug("Player is busy, skipping cordial check", tag);
+                return false;
+            }
+            return false;
         }
         private static bool WillOvercap(int recoveryGP)
         {

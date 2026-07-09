@@ -4,7 +4,6 @@ using ICE.Sounds;
 using ICE.Utilities.Cosmic_Helper;
 using TerraFX.Interop.Windows;
 using static ECommons.UIHelpers.AddonMasterImplementations.AddonMaster;
-using static ICE.Localization.L10n;
 
 namespace ICE.Scheduler.Tasks
 {
@@ -28,6 +27,14 @@ namespace ICE.Scheduler.Tasks
         }
         private static bool? CheckStateV2()
         {
+            void PlaySoundbit()
+            {
+                if (C.PlaySoundAlert)
+                {
+                    _ = SoundPlayer.PlaySoundAsync();
+                }
+            }
+
             string tag = "[Task: Check State]";
 
             IceLogging.Verbose("Updating the mission completion status", tag);
@@ -68,7 +75,7 @@ namespace ICE.Scheduler.Tasks
                         bool dualMission = (s.HasFlag(MissionAttributes.Craft) && (s.HasFlag(MissionAttributes.Gather) || s.HasFlag(MissionAttributes.Fish)));
                         // In the middle of a dual mission. 
                         // First, checking to see if you're in the middle of a gathering or crafting action
-                        if (C.OnlyGrabMission_Debug || config.ManualMode || UnsupportedMissions.Ids.Contains(currentMissionId))
+                        if (C.OnlyGrabMission_Debug || UnsupportedMissions.Ids.Contains(currentMissionId))
                         {
                             // TODO: Remove this once properly coded
                             if (s.HasFlag(MissionAttributes.Fish))
@@ -148,7 +155,8 @@ namespace ICE.Scheduler.Tasks
                     PlayerHelper.GetItemCount(itemId, out var credits);
                     if (credits >= C.LunarCreditsCap)
                     {
-                        IceLogging.ChatInfo(T("You've either hit the Lunar Credit threshold, or gone above it.\nStopping I.C.E."), "[I.C.E.]");
+                        IceLogging.ChatInfo($"You've either hit the Lunar Credit threshold, or gone above it.\n" +
+                                            $"Stopping I.C.E.", "[I.C.E.]");
                         SchedulerMain.State = IceState.Idle;
                         if (C.PlaySoundAlert)
                         {
@@ -161,7 +169,7 @@ namespace ICE.Scheduler.Tasks
                 {
                     if (GenericHelpers.TryGetAddonMaster<WKSHud>("WKSHud", out var hud) && hud.IsAddonReady && (hud.CosmoCredit >= C.CosmoCreditsCap))
                     {
-                        IceLogging.ChatInfo(T("Stopping the plugin as you have {0} Cosmocredits.", hud.CosmoCredit), "[I.C.E.]");
+                        IceLogging.ChatInfo($"Stopping the plugin as you have {hud.CosmoCredit} Cosmocredits.", "[I.C.E.]");
                         SchedulerMain.State = IceState.Idle;
                         if (C.PlaySoundAlert)
                         {
@@ -170,6 +178,9 @@ namespace ICE.Scheduler.Tasks
                         return true;
                     }
                 }
+
+                if (TryStopWhenStandardMissionsGolded(tag) == true)
+                    return true;
 
                 IceLogging.Verbose("We're currently in agenda mode. We need to check to see if we have anything even in the agenda before we continue", tag);
                 if (C.Cosmic_Agenda.Count > 0)
@@ -204,12 +215,9 @@ namespace ICE.Scheduler.Tasks
                     if (level >= C.TargetLevel)
                     {
                         SchedulerMain.State = IceState.Idle;
-                        IceLogging.ChatInfo(T("Stop At Player Level is enabled.\nYour current level is: {0} and Goal: {1}", Player.Level, C.TargetLevel), "[I.C.E.]");
-                        if (C.PlaySoundAlert)
-                        {
-                            _ = SoundPlayer.PlaySoundAsync();
-                        }
-
+                        IceLogging.ChatInfo("Stop At Player Level is enabled. \n" +
+                                           $"Your current level is: {Player.Level} and Goal: {C.TargetLevel}", "[I.C.E.]");
+                        PlaySoundbit();
                         return true;
                     }
                 }
@@ -219,11 +227,9 @@ namespace ICE.Scheduler.Tasks
                     if (currentScore >= C.CosmicScoreCap)
                     {
                         SchedulerMain.State = IceState.Idle;
-                        IceLogging.ChatInfo(T("Stop At Cosmic Score is enabled.\nYour current level is: {0} and Goal: {1}", currentScore, C.CosmicScoreCap), "[I.C.E.]");
-                        if (C.PlaySoundAlert)
-                        {
-                            _ = SoundPlayer.PlaySoundAsync();
-                        }
+                        IceLogging.ChatInfo("Stop At Cosmic Score is enabled. \n" +
+                            $"Your current level is: {currentScore} and Goal: {C.CosmicScoreCap}", "[I.C.E.]");
+                        PlaySoundbit();
                         return true;
                     }
                 }
@@ -236,12 +242,10 @@ namespace ICE.Scheduler.Tasks
                     PlayerHelper.GetItemCount(itemId, out var credits);
                     if (credits >= C.LunarCreditsCap)
                     {
-                        IceLogging.ChatInfo(T("You've either hit the Lunar Credit threshold, or gone above it.\nStopping I.C.E."), "[I.C.E.]");
+                        IceLogging.ChatInfo($"You've either hit the Lunar Credit threshold, or gone above it.\n" +
+                                            $"Stopping I.C.E.", "[I.C.E.]");
                         SchedulerMain.State = IceState.Idle;
-                        if (C.PlaySoundAlert)
-                        {
-                            _ = SoundPlayer.PlaySoundAsync();
-                        }
+                        PlaySoundbit();
                         return true;
                     }
                 }
@@ -249,20 +253,20 @@ namespace ICE.Scheduler.Tasks
                 {
                     if (GenericHelpers.TryGetAddonMaster<WKSHud>("WKSHud", out var hud) && hud.IsAddonReady && (hud.CosmoCredit >= C.CosmoCreditsCap))
                     {
-                        IceLogging.ChatInfo(T("Stopping the plugin as you have {0} Cosmocredits.", hud.CosmoCredit), "[I.C.E.]");
+                        IceLogging.ChatInfo($"Stopping the plugin as you have {hud.CosmoCredit} Cosmocredits.", "[I.C.E.]");
                         SchedulerMain.State = IceState.Idle;
-                        if (C.PlaySoundAlert)
-                        {
-                            _ = SoundPlayer.PlaySoundAsync();
-                        }
+                        PlaySoundbit();
                         return true;
                     }
                 }
                 if (C.StopOnceRelicFinished)
                 {
                     var relicInfo = cosmicClassInfo[(uint)jobId];
-                    bool potentionalTurnin = relicInfo.Stage_Current != relicInfo.Stage_Next;
+                    bool potentionalTurnin = relicInfo.Stage_Current < relicInfo.Stage_Next;
                     bool canTurnin = true;
+
+                    IceLogging.Verbose("Reporting back relic level", tag);
+                    IceLogging.Verbose($"Current Lv: {relicInfo.Stage_Current} | Next Lv: {relicInfo.Stage_Next}", tag);
 
                     if (potentionalTurnin)
                     {
@@ -271,7 +275,6 @@ namespace ICE.Scheduler.Tasks
                         var totalExpCount = relicInfo.CurrentExp.Count();
                         if (totalExpCount != 0)
                         {
-                            IceLogging.Verbose($"Current Lv: {relicInfo.Stage_Current} | Next Lv: {relicInfo.Stage_Next}");
                             IceLogging.Verbose($"Total Exp Types: {relicInfo.CurrentExp.Count()}");
                             foreach (var exp in relicInfo.CurrentExp)
                             {
@@ -288,12 +291,9 @@ namespace ICE.Scheduler.Tasks
                                 }
                                 else
                                 {
-                                    IceLogging.ChatInfo(T("We're at the point we can turn in the relic! Please do so, or disable stop when at relic turnin"), tag);
+                                    IceLogging.ChatInfo("We're at the point we can turn in the relic! Please do so, or disable stop when at relic turnin", tag);
                                     SchedulerMain.State = IceState.Idle;
-                                    if (C.PlaySoundAlert)
-                                    {
-                                        _ = SoundPlayer.PlaySoundAsync();
-                                    }
+                                    PlaySoundbit();
                                     return true;
                                 }
                             }
@@ -346,11 +346,63 @@ namespace ICE.Scheduler.Tasks
                         }
                     }
                 }
+                if (C.StopAtRelicLv)
+                {
+                    var relicInfo = cosmicClassInfo[(uint)jobId];
+                    // if 15 <= 20
+                    if (C.RelicLv <= relicInfo.Stage_Current)
+                    {
+                        IceLogging.ChatInfo($"Stopping the plugin as your current tool is at {relicInfo.Stage_Current} and your goal was: {C.RelicLv}");
+                        SchedulerMain.State = IceState.Idle;
+                        if (C.PlaySoundAlert)
+                        {
+                            _ = SoundPlayer.PlaySoundAsync();
+                        }
+                        return true;
+                    }
+                }
+                if (C.StopWhenMasteryComplete)
+                {
+                    var mastery = cosmicClassInfo[jobId];
+                    if (C.MasteryCap <= mastery.Mastery)
+                    {
+                        IceLogging.ChatInfo($"Stopping the plugin as your mastery score is at {mastery.Mastery} and your goal was: {C.MasteryCap}");
+                        SchedulerMain.State = IceState.Idle;
+                        PlaySoundbit();
+                        return true;
+                    }
+                }
+
+                if (TryStopWhenStandardMissionsGolded(tag) == true)
+                    return true;
 
                 IceLogging.Info("We have passed all stop when checks. So going to just do a general check on what we need to do", tag);
                 P.TaskManager.Enqueue(() => HubActivityCheck(), "Checking for reasons to go to hub");
             }
 
+            return true;
+        }
+        private static bool? TryStopWhenStandardMissionsGolded(string tag)
+        {
+            if (!C.StopOnceStandardMissionsGolded || !PlayerHelper.IsInCosmicZone())
+                return null;
+
+            var jobId = Mission_Settings.SelectedJob;
+            var territory = Player.Territory.RowId;
+            var (golded, total) = CosmicHelper.CountStandardMissionGold(jobId, territory);
+            if (total == 0 || golded < total)
+                return null;
+
+            var jobName = CosmicHelper.ClassInfoDict.TryGetValue(jobId, out var jobClass) ? jobClass.JobName : jobId.ToString();
+            var moonName = CosmicMoonRegistry.GetDisplayName(territory);
+            IceLogging.ChatInfo(
+                $"Stop When Standard Missions Golded is enabled.\n" +
+                $"All {total} standard missions are gold for {jobName} on {moonName} ({golded}/{total}).",
+                "[I.C.E.]");
+            SchedulerMain.State = IceState.Idle;
+            P.TaskManager.Tasks.Clear();
+            if (C.PlaySoundAlert)
+                _ = SoundPlayer.PlaySoundAsync();
             return true;
         }
         private static bool? AgendaCheck()
@@ -377,7 +429,7 @@ namespace ICE.Scheduler.Tasks
 
             foreach (var entry in agenda)
             {
-                IceLogging.Verbose($"Checking:\t" +
+                IceLogging.Verbose($"Checking:\n" +
                     $"Job: {entry.SelectedJob}\n" +
                     $"Agenda: {entry.SelectedMode}");
 
@@ -386,12 +438,13 @@ namespace ICE.Scheduler.Tasks
 
                 var relicLevel = relicInfo.Stage_Current;
                 var classScore = relicInfo.Score;
+                var masteryScore = relicInfo.Mastery;
                 var level = Player.GetLevel((Job)job);
 
                 bool MaxLevelExp = true;
                 foreach (var exp in relicInfo.CurrentExp)
                 {
-                    if (relicInfo.Stage_Current != relicInfo.Stage_Next)
+                    if (relicInfo.Stage_Current < relicInfo.Stage_Next)
                     {
                         MaxLevelExp = false;
                         break;
@@ -426,12 +479,27 @@ namespace ICE.Scheduler.Tasks
                     PlaylistOptions.ClassScore => classScore >= entry.ClassScore,
                     PlaylistOptions.ToolMaxExp => MaxLevelExp,
                     PlaylistOptions.GoldClassMissions => totalCompleted == totalMissions,
+                    PlaylistOptions.MasteryScore => masteryScore >= entry.ClassScore,
                     _ => true
                 };
 
                 if (!achieved)
                 {
+                    var progress = goal switch
+                    {
+                        _ when CosmicMoonRegistry.IsMaxRelicPlaylistGoal(goal) => $"{relicLevel}/{CosmicMoonRegistry.GetMaxRelicGoal(goal)}",
+                        PlaylistOptions.SelectedRelicLv => $"{relicLevel}/{entry.SelectedRelicLevel}",
+                        PlaylistOptions.CreditAmount => $"{creditAmount}/{entry.CreditAmount}",
+                        PlaylistOptions.PlanetAmount => $"{planetCreditAmount}/{entry.PlanetAmount}",
+                        PlaylistOptions.DronebitAmount => $"{dronebitAmount}/{entry.DronebitAmount}",
+                        PlaylistOptions.ClassLevel => $"{level}/{entry.ClassLevel}",
+                        PlaylistOptions.ClassScore => $"{classScore}/{entry.ClassScore}",
+                        PlaylistOptions.ToolMaxExp or PlaylistOptions.GoldClassMissions => $"{achieved}",
+                        PlaylistOptions.MasteryScore => $"{masteryScore}/{entry.ClassScore}",
+                        _ => "?"
+                    };
                     IceLogging.Info($"Priority has been found to achieve: {goal}. Going to aim to complete this goal", tag);
+                    IceLogging.Debug($"[Goal Check] {goal}: {progress} (achieved={achieved})", tag);
                     Mission_Settings.Mode = entry.SelectedMode;
                     Mission_Settings.SelectedJob = entry.SelectedJob;
                     P.TaskManager.Enqueue(() => HubActivityCheck(), "Checking for reason to go to hub");
@@ -529,12 +597,19 @@ namespace ICE.Scheduler.Tasks
                     BuyItems = creditAmount >= C.CosmoBuyAtAmount && Task_BuyCosmoItems.CanPurchaseAnyItem();
                 }
             }
+            if (Task_BuyCosmoItems.CanExchangeTokens() || Task_BuyCosmoItems.CanExchangeMount())
+            {
+                BuyItems = true;
+            }
             if (C.TurninRelic)
             {
                 var jobId = Mission_Settings.SelectedJob;
                 var relicInfo = relicProgress[jobId];
 
-                bool isUpgradable = relicInfo.Stage_Current != relicInfo.Stage_Next;
+                bool isUpgradable = relicInfo.Stage_Current < relicInfo.Stage_Next;
+                IceLogging.Verbose("Reporting Relic Info Progress", tag);
+                IceLogging.Verbose($"Job: [{CosmicHelper.GetJobName(jobId)} | {jobId}]", tag);
+                IceLogging.Verbose($"Current Stage: [{relicInfo.Stage_Current}] | Next Stage [{relicInfo.Stage_Next}]");
 
                 if (isUpgradable)
                 {
@@ -549,28 +624,25 @@ namespace ICE.Scheduler.Tasks
                             canTurnin &= exp.Value.Current >= exp.Value.Needed;
                         }
                         TurninRelic = isUpgradable && canTurnin;
-
+                        IceLogging.Verbose($"Are we expecting to turnin the relic? | [{TurninRelic}]", tag);
                     }
                     else
                     {
                         if (EzThrottler.Throttle("Force update exp"))
                         {
-                            IceLogging.Verbose("We seem... to be missing the exp? Which is odd. So going to force an update?");
-                            CosmicHelper.Task_UpdateRelicMissionInfo();
+                            IceLogging.Verbose("We seem... to be missing the exp? Which is odd. So going to force an update?", tag);
                         }
                         return false;
                     }
                 }
             }
 
-            Task_HubActivities.ApplyPostHubReentryGuard(ref BuyDrones, ref GambaWheel);
-
             if (BuyDrones || GambaWheel || BuyItems || RepairVendor || TurninRelic)
             {
                 IceLogging.Info("We have some reason to return back to the base so... we're doing so.\n" +
                                   $"Can Buy Drones: {BuyDrones}\n" +
                                   $"Gamba Wheel: {GambaWheel}\n" +
-                                  $"Buying Cosmocredit Items: {BuyItems}\n" +
+                                  $"Buying Cosmocredit/Mount Items: {BuyItems}\n" +
                                   $"Repair At Vendor: {RepairVendor}\n" +
                                   $"Turnin Relic: {TurninRelic}", tag);
                 Task_HubActivities.CanBuyDrones = BuyDrones;
